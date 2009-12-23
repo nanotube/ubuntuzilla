@@ -41,16 +41,11 @@
 ## The 'BaseStarter' class processes the command line options, and decides
 ## what to do accordingly.
 ##
-## The 'UbuntuzillaUpdater' class carries out updates of Ubuntuzilla itself.
-##
 ## The 'VersionInfo' class is just a simple repository of version and other
 ## descriptive information about this software.
 ##
 ## The 'UtilityFunctions' class has some general functions that don't belong
 ## in the Mozilla classes.
-##
-## The 'Notifier' class is a wrapper for dbus Notifications that sends the
-## GUI update notifications.
 ##
 ##############################################################################
 
@@ -546,7 +541,7 @@ Categories=Application;Network;''')
     
     def createRepository(self):
         os.chdir(self.options.debdir)
-        self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./firefox_' + self.releaseVersion + '-0ubuntu1_i386.deb')
+        self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./'+self.options.package+'_' + self.releaseVersion + '-0ubuntu1_i386.deb')
     
     def syncRepository(self):
         print "Would you like to upload the repository updates to the server [y/n]? "
@@ -669,7 +664,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/"+ self.locList[self.locChoice] + "/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/" + self.packageFilename, 'includewithtest':True})
     
     def getMD5Sum(self): #don't need, blank out
         pass
@@ -708,7 +703,7 @@ class SeamonkeyInstaller(MozillaInstaller):
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/"+ self.locList[self.locChoice] + "/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/" + self.packageFilename, 'includewithtest':True})
 
     def downloadGPGSignature(self): #don't need this for seamonkey, blank it out
         pass
