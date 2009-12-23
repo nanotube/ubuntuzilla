@@ -200,6 +200,7 @@ class BaseStarter:
         parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['builddeb',], help="what to do with the selected package: builddeb creates the .deb. This option is rather useless and vestigial. [default: %default]")
         parser.add_option("-g", "--skipgpg", action="store_true", dest="skipgpg", help="skip gpg signature verification. [default: %default]")
         parser.add_option("-u", "--unattended", action="store_true", dest="unattended", help="run in unattended mode. [default: %default]")
+        parser.add_option("-s", "--sync", action="store_true", dest="sync", help="Only sync the repository, don't do anything else. [default: %default]")
         #parser.add_option("-l", "--localization", action="store", dest="localization", help="for use with unattended mode only. choose localization (language) for your package of choice. note that the burden is on you to make sure that this localization of your package actually exists. [default: %default]")
         parser.add_option("-b", "--debdir", action="store", dest="debdir", help="Directory where to stick the completed .deb file. [default: %default]")
         parser.add_option("-r", "--targetdir", action="store", dest="targetdir", help="installation/uninstallation target directory for the .deb. [default: %default]")
@@ -543,6 +544,19 @@ Categories=Application;Network;''')
         self.util.execSystemCommand('dpkg-deb --build debian ' + self.options.debdir)
     
     
+    def createRepository(self):
+        os.chdir(self.options.debdir)
+        self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./firefox_' + self.releaseVersion + '-0ubuntu1_i386.deb')
+    
+    def syncRepository(self):
+        print "Would you like to upload the repository updates to the server [y/n]? "
+        self.askyesno()
+        if self.ans == 'y':
+            os.chdir(self.options.debdir)
+            self.util.execSystemCommand('rsync -avP -e ssh ../mozilla-apt-repository/* nanotube,ubuntuzilla@frs.sourceforge.net:/home/frs/project/u/ub/ubuntuzilla/mozilla/apt/')
+        else:
+            print "\nOK, exiting without uploading. If you want to upload later, run this with action='upload'."
+    
     def printSuccessMessage(self):
         print "\nThe new " + self.options.package.capitalize() + " version " + self.releaseVersion + " has been packaged successfully."
         #print bold + "\nMake sure to completely quit the old version of " + self.options.package.capitalize() + " for the change to take effect." + unbold
@@ -561,27 +575,34 @@ Categories=Application;Network;''')
     
 
     def install(self):
-        self.welcome()
-        self.getLatestVersion()
-        self.confirmLatestVersion()
-        self.downloadPackage()
-        if not self.options.skipgpg:
-            self.downloadGPGSignature()
-            self.getMozillaGPGKey()
-            self.verifyGPGSignature()
-        self.getMD5Sum()
-        self.verifyMD5Sum()
-        self.createDebStructure()
-        self.extractArchive()
-        self.createSymlinks()
-        #self.linkPlugins()
-        #self.linkLauncher()
-        self.createMenuItem()
-        self.createDeb()
-        self.cleanup()
-        self.printSuccessMessage()
+        if not self.options.sync:
+            self.welcome()
+            self.getLatestVersion()
+            self.confirmLatestVersion()
+            self.downloadPackage()
+            if not self.options.skipgpg:
+                self.downloadGPGSignature()
+                self.getMozillaGPGKey()
+                self.verifyGPGSignature()
+            self.getMD5Sum()
+            self.verifyMD5Sum()
+            self.createDebStructure()
+            self.extractArchive()
+            self.createSymlinks()
+            #self.linkPlugins()
+            #self.linkLauncher()
+            self.createMenuItem()
+            self.createDeb()
+            self.createRepository()
+            self.syncRepository()
+            self.cleanup()
+            self.printSuccessMessage()
         #self.installupdater()
         #self.printSupportRequest()
+        else:
+            self.welcome()
+            self.syncRepository()
+            
 
         
     def askyesno(self):
