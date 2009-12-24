@@ -469,7 +469,8 @@ Provides: '''+self.options.package+'''
     
         print"Creating Applications menu item for "+self.options.package.capitalize()+".\n"
         os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
-        menuitemfile = open(self.options.package + ".desktop", "w+")
+        menufilename = 'mozilla.' + self.options.package + '.desktop'
+        menuitemfile = open(menufilename, "w+")
         menuitemfile.write('''[Desktop Entry]
 Encoding=UTF-8
 Name=''' + self.options.package.capitalize() + '''
@@ -482,8 +483,8 @@ X-MultipleArgs=false
 Type=Application
 Categories=Application;Network;''')
         menuitemfile.close()
-        self.util.execSystemCommand(executionstring="sudo chown root:root " + self.options.package + ".desktop")
-        self.util.execSystemCommand(executionstring="sudo chmod 644 " + self.options.package + ".desktop")
+        self.util.execSystemCommand(executionstring="sudo chown root:root " + menufilename)
+        self.util.execSystemCommand(executionstring="sudo chmod 644 " + menufilename)
 
     def linkPlugins(self):
         # order of preference:
