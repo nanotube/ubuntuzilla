@@ -278,6 +278,7 @@ class MozillaInstaller:
             print "Debug mode ON."
         os.chdir('/tmp')
         self.debdir = os.path.join('/tmp',self.options.package + 'debbuild', 'debian')
+        self.packagename = self.options.package + '.mozilla.build'
     
     def start(self):
         if self.options.action == 'builddeb':
@@ -428,7 +429,7 @@ class MozillaInstaller:
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'DEBIAN'))
                 
         os.chdir(os.path.join(self.debdir, 'DEBIAN'))
-        open('control', 'w').write('''Package: ''' + self.options.package + '''
+        open('control', 'w').write('''Package: ''' + self.packagename + '''
 Version: ''' + self.releaseVersion + '''-0ubuntu1
 Maintainer: ''' + self.version.author + ''' <''' + self.version.author_email + '''>
 Architecture: i386
@@ -444,7 +445,25 @@ Description: Mozilla '''+self.options.package.capitalize()+''', official Mozilla
  http://www.mozilla.com
 Provides: '''+self.options.package+'''
 ''')
-    
+        # write the preinst and postrm scripts to divert /usr/bin/<package> links
+        open('preinst', 'w').write('''#!/bin/sh
+case "$1" in
+    install)
+        dpkg-divert --package ''' + self.packagename + ''' --add --divert /usr/bin/'''+self.options.package+'''.ubuntu --rename /usr/bin/'''+self.options.package+'''
+    ;;
+esac
+''')
+
+        open('postrm', 'w').write('''#!/bin/sh
+case "$1" in
+    remove|abort-install|disappear)
+        dpkg-divert --package ''' + self.packagename + ''' --remove --divert /usr/bin/'''+self.options.package+'''.ubuntu --rename /usr/bin/'''+self.options.package+'''
+    ;;
+esac    
+''')    
+        self.util.execSystemCommand('chmod 755 preinst')
+        self.util.execSystemCommand('chmod 755 postrm')
+   
     def extractArchive(self):
         print "\nExtracting archive\n"
         if re.search('\.tar\.gz$', self.packageFilename):
@@ -466,20 +485,34 @@ Provides: '''+self.options.package+'''
         self.util.execSystemCommand('sudo ln -s ' + os.path.join(self.options.targetdir, self.options.package, self.options.package) + ' ' + self.options.package)
     
     def createMenuItem(self):
-    
+        
+        if self.options.package == 'firefox':
+            iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
+            GenericName = "Browser"
+            Comment = "Web Browser"
+        if self.options.package == 'thunderbird':
+            iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
+            GenericName = "Mail Client"
+            Comment = "Read/Write Mail/News with Mozilla Thunderbird"
+        if self.options.package == 'seamonkey':
+            iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/" + self.options.package + ".png"
+            GenericName = "Internet Suite"
+            Comment = "Web Browser, Email/News Client, HTML Editor, IRC Client"
+        
         print"Creating Applications menu item for "+self.options.package.capitalize()+".\n"
         os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
         menufilename = 'mozilla.' + self.options.package + '.desktop'
         menuitemfile = open(menufilename, "w+")
         menuitemfile.write('''[Desktop Entry]
 Encoding=UTF-8
-Name=''' + self.options.package.capitalize() + '''
-GenericName=Browser
-Comment=Internet-Browser
-Exec=''' + self.options.package + '''
-Icon=''' + self.options.targetdir + '/' + self.options.package + '''/chrome/icons/default/''' + self.options.package + '''.png
+Name=Mozilla Build of ''' + self.options.package.capitalize() + '''
+GenericName=''' + GenericName + '''
+Comment=''' + Comment + '''
+Exec=''' + self.options.package + ''' %u
+Icon=''' + iconPath + '''
 Terminal=false
 X-MultipleArgs=false
+StartupNotify=true
 Type=Application
 Categories=Application;Network;''')
         menuitemfile.close()
@@ -542,7 +575,7 @@ Categories=Application;Network;''')
     
     def createRepository(self):
         os.chdir(self.options.debdir)
-        self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./'+self.options.package+'_' + self.releaseVersion + '-0ubuntu1_i386.deb')
+        self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./'+self.packagename+'_' + self.releaseVersion + '-0ubuntu1_i386.deb')
     
     def syncRepository(self):
         print "Would you like to upload the repository updates to the server [y/n]? "
