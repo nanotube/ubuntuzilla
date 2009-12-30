@@ -491,7 +491,7 @@ esac
             GenericName = "Browser"
             Comment = "Web Browser"
         if self.options.package == 'thunderbird':
-            iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
+            iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default48.png"
             GenericName = "Mail Client"
             Comment = "Read/Write Mail/News with Mozilla Thunderbird"
         if self.options.package == 'seamonkey':
