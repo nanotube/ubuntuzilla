@@ -278,7 +278,7 @@ class MozillaInstaller:
             print "Debug mode ON."
         os.chdir('/tmp')
         self.debdir = os.path.join('/tmp',self.options.package + 'debbuild', 'debian')
-        self.packagename = self.options.package + '.mozilla.build'
+        self.packagename = self.options.package + '-mozilla-build'
     
     def start(self):
         if self.options.action == 'builddeb':
