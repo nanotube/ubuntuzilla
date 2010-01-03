@@ -192,11 +192,11 @@ class BaseStarter:
         parser.add_option("-d", "--debug", action="store_true", dest="debug", help="debug mode (print some extra debug output). [default: %default]")
         parser.add_option("-t", "--test", action="store_true", dest="test", help="make a dry run, without actually installing anything. [default: %default]")
         parser.add_option("-p", "--package", type="choice", action="store", dest="package", choices=['firefox','thunderbird','seamonkey'], help="which package to work on: firefox, thunderbird, or seamonkey. [default: %default]")
-        parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['builddeb',], help="what to do with the selected package: builddeb creates the .deb. This option is rather useless and vestigial. [default: %default]")
+        parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['builddeb','adddebtorepo','uploadrepo','cleanup','all',], help="what to do with the selected package: builddeb creates the .deb; adddebtorepo updates the repository; uploadrepo uploads the repository; cleanup removes temporary files; all does all of this from start to finish. [default: %default]")
         parser.add_option("-g", "--skipgpg", action="store_true", dest="skipgpg", help="skip gpg signature verification. [default: %default]")
         parser.add_option("-u", "--unattended", action="store_true", dest="unattended", help="run in unattended mode. [default: %default]")
-        parser.add_option("-s", "--sync", action="store_true", dest="sync", help="Only sync the repository, don't do anything else. [default: %default]")
         #parser.add_option("-l", "--localization", action="store", dest="localization", help="for use with unattended mode only. choose localization (language) for your package of choice. note that the burden is on you to make sure that this localization of your package actually exists. [default: %default]")
+        parser.add_option("-v", "--debversion", action="store", dest="debversion", help="The ubuntu-version of the package to create. To be used in case a bad package was pushed out, and users should be upgraded to a fresh repack. [default: %default]")
         parser.add_option("-b", "--debdir", action="store", dest="debdir", help="Directory where to stick the completed .deb file. [default: %default]")
         parser.add_option("-r", "--targetdir", action="store", dest="targetdir", help="installation/uninstallation target directory for the .deb. [default: %default]")
         parser.add_option("-m", "--mirror", action="callback", callback=prepend_callback, type="string", dest="mirrors", help="Prepend a mozilla mirror server to the default list of mirrors. Use ftp mirrors only. Include path component up to the 'firefox', 'thunderbird', or 'seamonkey' directories. (See http://www.mozilla.org/mirrors.html for list of mirrors). [default: %default]")
@@ -205,9 +205,10 @@ class BaseStarter:
         parser.set_defaults(debug=False, 
                 test=False, 
                 package="firefox",
-                action="builddeb",
+                action="all",
                 skipgpg=False,
                 unattended=False,
+                debversion='1',
                 #localization="en-US",
                 #skipbackup=False,
                 debdir=os.getcwd(),
@@ -281,22 +282,38 @@ class MozillaInstaller:
         self.packagename = self.options.package + '-mozilla-build'
     
     def start(self):
-        if self.options.action == 'builddeb':
-            self.install()
-        #elif self.options.action == 'remove':
-            #self.remove()
-        #elif self.options.action == 'installupdater':
-            #self.installupdater()
-        #elif self.options.action == 'removeupdater':
-            #self.removeupdater()
-        #elif self.options.action == 'checkforupdatetext':
-            #self.checkforupdateText()
-        #elif self.options.action == 'checkforupdategui':
-            #self.checkforupdateGui()
-    
+        self.welcome()
+        
+        if self.options.action in ['builddeb','all']:
+            self.getLatestVersion()
+            self.confirmLatestVersion()
+            self.downloadPackage()
+            if not self.options.skipgpg:
+                self.downloadGPGSignature()
+                self.getMozillaGPGKey()
+                self.verifyGPGSignature()
+            self.getMD5Sum()
+            self.verifyMD5Sum()
+            self.createDebStructure()
+            self.extractArchive()
+            self.createSymlinks()
+            self.createMenuItem()
+            self.createDeb()
+        if self.options.action in ['adddebtorepo','all']:
+            if self.options.action == 'adddebtorepo':
+                self.getLatestVersion() # need this still, to know which deb to add
+            self.createRepository()
+        if self.options.action in ['uploadrepo','all']:
+            self.syncRepository()
+        if self.options.action in ['cleanup','all']:
+            self.cleanup()
+        
+        self.printSuccessMessage()
+
     def welcome(self):
         print "\nWelcome to Ubuntuzilla version " + self.version.version + "\n\nUbuntuzilla creates a .deb file out of the latest release of Firefox, Thunderbird, or Seamonkey.\n\nThis script will now build the .deb of latest release of the official Mozilla build of " + self.options.package.capitalize() + ". If you run into any problems using this script, or have feature requests, suggestions, or general comments, please visit our website at", self.version.url, "\n"
         
+        print "\nThe action you have requested is: " + bold + self.options.action + unbold + '\n'
 
     def getLatestVersion(self): # done in child, in self.releaseVersion
         print "Retrieving the version of the latest release of " + self.options.package.capitalize() + " from the Mozilla website..."
@@ -430,7 +447,7 @@ class MozillaInstaller:
                 
         os.chdir(os.path.join(self.debdir, 'DEBIAN'))
         open('control', 'w').write('''Package: ''' + self.packagename + '''
-Version: ''' + self.releaseVersion + '''-0ubuntu1
+Version: ''' + self.releaseVersion + '''-0ubuntu''' + self.options.debversion + '''
 Maintainer: ''' + self.version.author + ''' <''' + self.version.author_email + '''>
 Architecture: i386
 Description: Mozilla '''+self.options.package.capitalize()+''', official Mozilla build, packaged for Ubuntu by the Ubuntuzilla project.
@@ -485,20 +502,7 @@ esac
         self.util.execSystemCommand('sudo ln -s ' + os.path.join(self.options.targetdir, self.options.package, self.options.package) + ' ' + self.options.package)
     
     def createMenuItem(self):
-        
-        if self.options.package == 'firefox':
-            iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
-            GenericName = "Browser"
-            Comment = "Web Browser"
-        if self.options.package == 'thunderbird':
-            iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default48.png"
-            GenericName = "Mail Client"
-            Comment = "Read/Write Mail/News with Mozilla Thunderbird"
-        if self.options.package == 'seamonkey':
-            iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/" + self.options.package + ".png"
-            GenericName = "Internet Suite"
-            Comment = "Web Browser, Email/News Client, HTML Editor, IRC Client"
-        
+                
         print"Creating Applications menu item for "+self.options.package.capitalize()+".\n"
         os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
         menufilename = 'mozilla.' + self.options.package + '.desktop'
@@ -506,10 +510,10 @@ esac
         menuitemfile.write('''[Desktop Entry]
 Encoding=UTF-8
 Name=Mozilla Build of ''' + self.options.package.capitalize() + '''
-GenericName=''' + GenericName + '''
-Comment=''' + Comment + '''
+GenericName=''' + self.GenericName + '''
+Comment=''' + self.Comment + '''
 Exec=''' + self.options.package + ''' %u
-Icon=''' + iconPath + '''
+Icon=''' + self.iconPath + '''
 Terminal=false
 X-MultipleArgs=false
 StartupNotify=true
@@ -518,64 +522,20 @@ Categories=Application;Network;''')
         menuitemfile.close()
         self.util.execSystemCommand(executionstring="sudo chown root:root " + menufilename)
         self.util.execSystemCommand(executionstring="sudo chmod 644 " + menufilename)
-
-    def linkPlugins(self):
-        # order of preference:
-        #/usr/lib/xulrunner-addons/plugins
-        #/usr/lib/xulrunner-1.9a/plugins
-        #/usr/lib/xulrunner/plugins
-        #/usr/lib/firefox/plugins
-        # releases after hardy don't need this at all...
-        
-        self.pluginPath = None
-        
-        print "Trying to determine firefox plugin path..."
-                    
-        result = self.util.getSystemOutput(executionstring="find /usr/lib -name 'libunixprintplugin.so'", numlines=0)
-        for line in result:
-            if re.match('/usr/lib/xulrunner-addons/plugins', line):
-                self.pluginPath = os.path.dirname(line)
-                break
-        if self.pluginPath == None:
-            for line in result:
-                if re.search('/usr/lib/xulrunner\-[^/]/plugins', line):
-                    self.pluginPath = os.path.dirname(line)
-                    break
-        if self.pluginPath == None:
-            for line in result:
-                if re.search('/usr/lib/xulrunner/plugins', line):
-                    self.pluginPath = os.path.dirname(line)
-                    break
-        if self.pluginPath == None:
-            for line in result:
-                if re.search('/usr/lib/firefox/plugins', line):
-                    self.pluginPath = os.path.dirname(line)
-                    break
-        
-        if self.pluginPath == None:
-            self.pluginPath = '/usr/lib/mozilla/plugins'
-        
-        print "Plugin path is: ", self.pluginPath
-        
-        print "\nLinking plugins\n"
-        if os.path.lexists(os.path.join(self.options.targetdir, self.options.package, "plugins")):
-            self.util.execSystemCommand(executionstring="sudo mv " + os.path.join(self.options.targetdir, self.options.package, "plugins") + " " + os.path.join(self.options.targetdir, self.options.package, "plugins_$(date -Iseconds)"))
-        self.util.execSystemCommand(executionstring="sudo ln -s -f " + self.pluginPath + " " + os.path.join(self.options.targetdir, self.options.package, "plugins"))
-        
-        print "\nLinking dictionaries\n"
-        if os.path.lexists(os.path.join(self.options.targetdir, self.options.package, "dictionaries")):
-            self.util.execSystemCommand(executionstring="sudo mv " + os.path.join(self.options.targetdir, self.options.package, "dictionaries") + " " + os.path.join(self.options.targetdir, self.options.package, "dictionaries_$(date -Iseconds)"))
-        self.util.execSystemCommand(executionstring="sudo ln -s -f " + "/usr/share/myspell/dicts" + " " + os.path.join(self.options.targetdir, self.options.package, "dictionaries"))
     
     def createDeb(self):
         os.chdir(os.path.join('/tmp',self.options.package + 'debbuild'))
         self.util.execSystemCommand('sudo chown -R root:root debian')
         self.util.execSystemCommand('dpkg-deb --build debian ' + self.options.debdir)
     
-    
     def createRepository(self):
-        os.chdir(self.options.debdir)
-        self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./'+self.packagename+'_' + self.releaseVersion + '-0ubuntu1_i386.deb')
+        print "Would you like to update the local repository with the package just created [y/n]? "
+        self.askyesno()
+        if self.ans == 'y':
+            os.chdir(self.options.debdir)
+            self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./'+self.packagename+'_' + self.releaseVersion + '-0ubuntu' + self.options.debversion + '_i386.deb')
+        else:
+            print "\nOK, not updating repository...\n"
     
     def syncRepository(self):
         print "Would you like to upload the repository updates to the server [y/n]? "
@@ -584,13 +544,11 @@ Categories=Application;Network;''')
             os.chdir(self.options.debdir)
             self.util.execSystemCommand('rsync -avP -e ssh ../mozilla-apt-repository/* nanotube,ubuntuzilla@frs.sourceforge.net:/home/frs/project/u/ub/ubuntuzilla/mozilla/apt/')
         else:
-            print "\nOK, exiting without uploading. If you want to upload later, run this with action='upload'."
+            print "\nOK, not uploading repository to server...\n"
     
     def printSuccessMessage(self):
         print "\nThe new " + self.options.package.capitalize() + " version " + self.releaseVersion + " has been packaged successfully."
-        #print bold + "\nMake sure to completely quit the old version of " + self.options.package.capitalize() + " for the change to take effect." + unbold
 
-        
     def cleanup(self):
         print "Would you like to KEEP the original files, and the deb structure, on your hard drive [y/n]? "
         self.askyesno()
@@ -600,39 +558,6 @@ Categories=Application;Network;''')
             os.remove(self.sigFilename)
         else:
             print "\nOK, exiting without deleting the working files. If you wish to delete them manually later, they are in /tmp, and in " + self.debdir + "."
-    
-    
-
-    def install(self):
-        if not self.options.sync:
-            self.welcome()
-            self.getLatestVersion()
-            self.confirmLatestVersion()
-            self.downloadPackage()
-            if not self.options.skipgpg:
-                self.downloadGPGSignature()
-                self.getMozillaGPGKey()
-                self.verifyGPGSignature()
-            self.getMD5Sum()
-            self.verifyMD5Sum()
-            self.createDebStructure()
-            self.extractArchive()
-            self.createSymlinks()
-            #self.linkPlugins()
-            #self.linkLauncher()
-            self.createMenuItem()
-            self.createDeb()
-            self.createRepository()
-            self.syncRepository()
-            self.cleanup()
-            self.printSuccessMessage()
-        #self.installupdater()
-        #self.printSupportRequest()
-        else:
-            self.welcome()
-            self.syncRepository()
-            
-
         
     def askyesno(self):
         if not self.options.unattended:
@@ -643,6 +568,8 @@ Categories=Application;Network;''')
                     break
         else:
             self.ans = 'y'
+
+
 
 class FirefoxInstaller(MozillaInstaller):
     '''This class works with the firefox package'
@@ -655,8 +582,6 @@ class FirefoxInstaller(MozillaInstaller):
         self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.mozilla.com |grep 'product=' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
         self.releaseVersion = re.search(r'firefox\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
         
-
-
     def downloadPackage(self): # done, self.packageFilename
         MozillaInstaller.downloadPackage(self)
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
@@ -671,15 +596,13 @@ class FirefoxInstaller(MozillaInstaller):
     def verifyMD5Sum(self): #don't need, blank out
         pass
     
-    #def linkLauncher(self):
-        #print "\nLinking launcher to new Firefox\n"
-        #self.util.execSystemCommand(executionstring="sudo dpkg-divert --divert /usr/bin/firefox.ubuntu --rename /usr/bin/firefox")
-        #self.util.execSystemCommand(executionstring="sudo ln -s -f "+self.options.targetdir+"/firefox/firefox /usr/bin/firefox")
-        #self.util.execSystemCommand(executionstring="sudo dpkg-divert --divert /usr/bin/mozilla-firefox.ubuntu --rename /usr/bin/mozilla-firefox")
-        #self.util.execSystemCommand(executionstring="sudo ln -s -f "+self.options.targetdir+"/firefox/firefox /usr/bin/mozilla-firefox")
-    
-
-    
+    def createMenuItem(self):
+        
+        self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
+        self.GenericName = "Browser"
+        self.Comment = "Web Browser"
+        MozillaInstaller.createMenuItem(self)
+        
 class ThunderbirdInstaller(MozillaInstaller):
     '''This class works with the thunderbird package'
     '''
@@ -707,15 +630,11 @@ class ThunderbirdInstaller(MozillaInstaller):
         pass
         
     
-    #def linkLauncher(self):
-        #print "\nLinking launcher to new thunderbird\n"
-        #self.util.execSystemCommand(executionstring="sudo dpkg-divert --divert /usr/bin/mozilla-thunderbird.ubuntu --rename /usr/bin/mozilla-thunderbird")
-        #self.util.execSystemCommand(executionstring="sudo dpkg-divert --divert /usr/bin/thunderbird.ubuntu --rename /usr/bin/thunderbird")
-        #self.util.execSystemCommand(executionstring="sudo ln -s -f "+self.options.targetdir+"/thunderbird/thunderbird /usr/bin/thunderbird")
-        #self.util.execSystemCommand(executionstring="sudo ln -s -f "+self.options.targetdir+"/thunderbird/thunderbird /usr/bin/mozilla-thunderbird")
-        #self.util.execSystemCommand(executionstring="sudo ln -s -f "+self.options.targetdir+"/thunderbird/thunderbird-bin "+self.options.targetdir+"/thunderbird/mozilla-thunderbird-bin")
-    
-    
+    def createMenuItem(self):
+        self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default48.png"
+        self.GenericName = "Mail Client"
+        self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
+        MozillaInstaller.createMenuItem(self)
 
 class SeamonkeyInstaller(MozillaInstaller):
     '''This class works with the seamonkey package'
@@ -723,14 +642,11 @@ class SeamonkeyInstaller(MozillaInstaller):
     def __init__(self,options):
         MozillaInstaller.__init__(self, options)
 
-
-
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
         self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.seamonkey-project.org/ |grep 'product=' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
         self.releaseVersion = re.search(r'seamonkey\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
     
-
     def downloadPackage(self): # done, self.packageFilename
         MozillaInstaller.downloadPackage(self)
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
@@ -747,22 +663,13 @@ class SeamonkeyInstaller(MozillaInstaller):
         
     def verifyGPGSignature(self): #don't need this for seamonkey, blank it out
         pass
-        
-        
-    #def linkLauncher(self):
-        
-        #print "\nCreating link to Seamonkey in /usr/bin/seamonkey\n"
-        #if os.path.exists('/usr/bin/seamonkey'):
-            #self.util.execSystemCommand(executionstring="sudo dpkg-divert --divert /usr/bin/seamonkey.ubuntu --rename /usr/bin/seamonkey")
-        #self.util.execSystemCommand(executionstring="sudo ln -s -f "+self.options.targetdir+"/seamonkey/seamonkey /usr/bin/seamonkey")
-
-    def printSuccessMessage(self):
-        MozillaInstaller.printSuccessMessage(self)
-        print "\nIf you are looking to use Seamonkey in multiple languages, head over to http://www.seamonkey-project.org/releases/#langpacks and download the installable language pack of your choice."
     
-
-    
-
+    def createMenuItem(self):
+        self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/" + self.options.package + ".png"
+        self.GenericName = "Internet Suite"
+        self.Comment = "Web Browser, Email/News Client, HTML Editor, IRC Client"
+        MozillaInstaller.createMenuItem(self)
+        
 if __name__ == '__main__':
     
     bs = BaseStarter()
