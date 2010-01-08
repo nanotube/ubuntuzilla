@@ -517,6 +517,7 @@ Icon=''' + self.iconPath + '''
 Terminal=false
 X-MultipleArgs=false
 StartupNotify=true
+StartupWMClass=''' + self.wmClass + '''
 Type=Application
 Categories=Application;Network;''')
         menuitemfile.close()
@@ -601,6 +602,7 @@ class FirefoxInstaller(MozillaInstaller):
         self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
         self.GenericName = "Browser"
         self.Comment = "Web Browser"
+        self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
         MozillaInstaller.createMenuItem(self)
         
 class ThunderbirdInstaller(MozillaInstaller):
@@ -634,6 +636,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default48.png"
         self.GenericName = "Mail Client"
         self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
+        self.wmClass = "Thunderbird-bin" # as determined by 'xprop WM_CLASS'
         MozillaInstaller.createMenuItem(self)
 
 class SeamonkeyInstaller(MozillaInstaller):
@@ -668,6 +671,7 @@ class SeamonkeyInstaller(MozillaInstaller):
         self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/" + self.options.package + ".png"
         self.GenericName = "Internet Suite"
         self.Comment = "Web Browser, Email/News Client, HTML Editor, IRC Client"
+        self.wmClass = "SeaMonkey" # as determined by 'xprop WM_CLASS'
         MozillaInstaller.createMenuItem(self)
         
 if __name__ == '__main__':
