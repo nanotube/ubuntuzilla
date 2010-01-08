@@ -283,10 +283,10 @@ class MozillaInstaller:
     
     def start(self):
         self.welcome()
+        self.getLatestVersion()
+        self.confirmLatestVersion()
         
         if self.options.action in ['builddeb','all']:
-            self.getLatestVersion()
-            self.confirmLatestVersion()
             self.downloadPackage()
             if not self.options.skipgpg:
                 self.downloadGPGSignature()
@@ -300,8 +300,6 @@ class MozillaInstaller:
             self.createMenuItem()
             self.createDeb()
         if self.options.action in ['adddebtorepo','all']:
-            if self.options.action == 'adddebtorepo':
-                self.getLatestVersion() # need this still, to know which deb to add
             self.createRepository()
         if self.options.action in ['uploadrepo','all']:
             self.syncRepository()
@@ -311,7 +309,7 @@ class MozillaInstaller:
         self.printSuccessMessage()
 
     def welcome(self):
-        print "\nWelcome to Ubuntuzilla version " + self.version.version + "\n\nUbuntuzilla creates a .deb file out of the latest release of Firefox, Thunderbird, or Seamonkey.\n\nThis script will now build the .deb of latest release of the official Mozilla build of " + self.options.package.capitalize() + ". If you run into any problems using this script, or have feature requests, suggestions, or general comments, please visit our website at", self.version.url, "\n"
+        print "\nWelcome to Ubuntuzilla Packager version " + self.version.version + "\n\nUbuntuzilla Packager creates a .deb file out of the latest release of Firefox, Thunderbird, or Seamonkey.\n\nThis script will now build the .deb of latest release of the official Mozilla build of " + self.options.package.capitalize() + ". If you run into any problems using this script, or have feature requests, suggestions, or general comments, please visit our website at", self.version.url, "\n"
         
         print "\nThe action you have requested is: " + bold + self.options.action + unbold + '\n'
 
