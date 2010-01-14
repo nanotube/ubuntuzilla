@@ -503,7 +503,7 @@ esac
                 
         print"Creating Applications menu item for "+self.options.package.capitalize()+".\n"
         os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
-        menufilename = 'mozilla.' + self.options.package + '.desktop'
+        menufilename = self.options.package + '-mozilla-build.desktop'
         menuitemfile = open(menufilename, "w+")
         menuitemfile.write('''[Desktop Entry]
 Encoding=UTF-8
@@ -597,7 +597,7 @@ class FirefoxInstaller(MozillaInstaller):
     
     def createMenuItem(self):
         
-        self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon50.xpm"
+        self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
         self.GenericName = "Browser"
         self.Comment = "Web Browser"
         self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
@@ -631,7 +631,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         
     
     def createMenuItem(self):
-        self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default48.png"
+        self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default256.png"
         self.GenericName = "Mail Client"
         self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
         self.wmClass = "Thunderbird-bin" # as determined by 'xprop WM_CLASS'
