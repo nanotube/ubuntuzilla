@@ -441,6 +441,7 @@ class MozillaInstaller:
         self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir + self.options.targetdir)
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','bin'))
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','share','applications'))
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','share','pixmaps'))
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'DEBIAN'))
                 
         os.chdir(os.path.join(self.debdir, 'DEBIAN'))
@@ -517,10 +518,14 @@ X-MultipleArgs=false
 StartupNotify=true
 StartupWMClass=''' + self.wmClass + '''
 Type=Application
-Categories=Application;Network;''')
+Categories=''' + self.Categories)
         menuitemfile.close()
         self.util.execSystemCommand(executionstring="sudo chown root:root " + menufilename)
         self.util.execSystemCommand(executionstring="sudo chmod 644 " + menufilename)
+        
+        os.chdir(os.path.join(self.debdir, 'usr','share','pixmaps'))
+        self.util.execSystemCommand(executionstring="cp " + self.options.debdir + "/" + self.options.package + "-mozilla-build.png ./")
+        
     
     def createDeb(self):
         os.chdir(os.path.join('/tmp',self.options.package + 'debbuild'))
@@ -596,11 +601,12 @@ class FirefoxInstaller(MozillaInstaller):
         pass
     
     def createMenuItem(self):
-        
-        self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
+        #self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
+        self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Browser"
         self.Comment = "Web Browser"
         self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
+        self.Categories = "Network;WebBrowser;"
         MozillaInstaller.createMenuItem(self)
         
 class ThunderbirdInstaller(MozillaInstaller):
@@ -631,10 +637,12 @@ class ThunderbirdInstaller(MozillaInstaller):
         
     
     def createMenuItem(self):
-        self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default256.png"
+        #self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default256.png"
+        self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Mail Client"
         self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
         self.wmClass = "Thunderbird-bin" # as determined by 'xprop WM_CLASS'
+        self.Categories = "Network;Email;"
         MozillaInstaller.createMenuItem(self)
 
 class SeamonkeyInstaller(MozillaInstaller):
@@ -666,10 +674,12 @@ class SeamonkeyInstaller(MozillaInstaller):
         pass
     
     def createMenuItem(self):
-        self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/" + self.options.package + ".png"
+        #self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/" + self.options.package + ".png"
+        self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Internet Suite"
         self.Comment = "Web Browser, Email/News Client, HTML Editor, IRC Client"
         self.wmClass = "SeaMonkey" # as determined by 'xprop WM_CLASS'
+        self.Categories = "Network;WebBrowser;Email;WebDevelopment;IRCClient;"
         MozillaInstaller.createMenuItem(self)
         
 if __name__ == '__main__':
