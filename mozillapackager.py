@@ -558,8 +558,8 @@ Categories=''' + self.Categories)
         self.askyesno()
         if self.ans == 'n':
             self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
-            os.remove(self.packageFilename)
-            os.remove(self.sigFilename)
+            os.remove(os.path.join('/tmp',self.packageFilename))
+            os.remove(os.path.join('/tmp',self.sigFilename))
         else:
             print "\nOK, exiting without deleting the working files. If you wish to delete them manually later, they are in /tmp, and in " + self.debdir + "."
         
