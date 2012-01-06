@@ -199,6 +199,7 @@ class BaseStarter:
         parser.add_option("-v", "--debversion", action="store", dest="debversion", help="The ubuntu-version of the package to create. To be used in case a bad package was pushed out, and users should be upgraded to a fresh repack. [default: %default]")
         parser.add_option("-b", "--debdir", action="store", dest="debdir", help="Directory where to stick the completed .deb file. [default: %default]")
         parser.add_option("-r", "--targetdir", action="store", dest="targetdir", help="installation/uninstallation target directory for the .deb. [default: %default]")
+        parser.add_option("-i", "--arch", type="choice", action="store", dest="arch", choices=['i686','x86_64'], help="which package to work on: firefox, thunderbird, or seamonkey. [default: %default]")
         parser.add_option("-m", "--mirror", action="callback", callback=prepend_callback, type="string", dest="mirrors", help="Prepend a mozilla mirror server to the default list of mirrors. Use ftp mirrors only. Include path component up to the 'firefox', 'thunderbird', or 'seamonkey' directories. (See http://www.mozilla.org/mirrors.html for list of mirrors). [default: %default]")
         parser.add_option("-k", "--keyservers", action="callback", callback=prepend_callback, type="string", dest="keyservers", help="Prepend a pgp keyserver to the default list of keyservers. [default: %default]")
         
@@ -213,6 +214,7 @@ class BaseStarter:
                 #skipbackup=False,
                 debdir=os.getcwd(),
                 targetdir="/opt",
+                arch="i686",
                 mirrors=['mozilla.isc.org/pub/mozilla.org/',
                         'mozilla.ussg.indiana.edu/pub/mozilla.org/',
                         'ftp.osuosl.org/pub/mozilla.org/',
@@ -280,7 +282,8 @@ class MozillaInstaller:
         os.chdir('/tmp')
         self.debdir = os.path.join('/tmp',self.options.package + 'debbuild', 'debian')
         self.packagename = self.options.package + '-mozilla-build'
-    
+        self.debarch = {'i686':'i386','x86_64':'amd64'}
+
     def start(self):
         self.welcome()
         self.getLatestVersion()
@@ -345,7 +348,7 @@ class MozillaInstaller:
         print "Retrieving package name for", self.options.package.capitalize(), "..."
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
                 print "Success!: " + self.packageFilename
                 break
             except SystemCommandExecutionError:
@@ -360,7 +363,7 @@ class MozillaInstaller:
         self.sigFilename = self.packageFilename + ".asc"
         print "\nDownloading " + self.options.package.capitalize() + " signature from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/" + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve GPG key. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve GPG key. This may be due to transient network problems, so try again later. Exiting.")
         
     def getMozillaGPGKey(self):
         ''' If key doesn't already exist on the system, retrieve key from keyserver.
@@ -393,18 +396,7 @@ class MozillaInstaller:
             if not self.keySuccess:
                 print "Failed to retrieve Mozilla Software Releases Public key from any of the listed keyservers. Please check your network connection, and try again later.\n"
                 sys.exit(1)
-    
-    def getMD5Sum(self): # done, self.sigFilename
-        self.sigFilename = self.packageFilename + ".md5"
-        print "\nDownloading Seamonkey MD5 sums from the Mozilla site\n"
-                
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/MD5SUMS | grep -F 'linux-i686/en-US/" + self.packageFilename + "' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
-        
-        # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
-        # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
-        print "demunging: sed -i 's#linux-i686/en-US/##' " + self.sigFilename + "...\n" 
-        self.util.execSystemCommand("sed -i 's#linux-i686/en-US/##' " + self.sigFilename, includewithtest=True)
-        
+
     def verifyGPGSignature(self):
         print "\nVerifying signature...\nNote: do not worry about \"untrusted key\" warnings. That is normal behavior for newly imported keys.\n"
         returncode = os.system("gpg --verify " + self.sigFilename + " " + self.packageFilename)
@@ -419,22 +411,13 @@ class MozillaInstaller:
             else:
                 print "OK, exiting without deleting files.\n"
             sys.exit(1)
-        
+
+    def getMD5Sum(self):
+        pass
+
     def verifyMD5Sum(self):
-        print "\nVerifying Seamonkey MD5 sum\n"
-        returncode = os.system("md5sum -c " + self.sigFilename)
-        if returncode:
-            print "MD5 sum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n"
-            print "Would you like to delete those two files now? [y/n]? "
-            self.askyesno()
-            if self.ans == 'y':
-                print "\nOK, deleting files and exiting.\n"
-                os.remove(self.packageFilename)
-                os.remove(self.sigFilename)
-            else:
-                print "OK, exiting without deleting files.\n"
-            sys.exit(1)
-    
+        pass
+
     def createDebStructure(self):
         self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
         self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir)
@@ -448,7 +431,7 @@ class MozillaInstaller:
         open('control', 'w').write('''Package: ''' + self.packagename + '''
 Version: ''' + self.releaseVersion + '''-0ubuntu''' + self.options.debversion + '''
 Maintainer: ''' + self.version.author + ''' <''' + self.version.author_email + '''>
-Architecture: i386
+Architecture: ''' + self.debarch[self.options.arch] + '''
 Description: Mozilla '''+self.options.package.capitalize()+''', official Mozilla build, packaged for Ubuntu by the Ubuntuzilla project.
  This is the unmodified Mozilla release binary of '''+self.options.package.capitalize()+''', packaged into a .deb by the Ubuntuzilla project.
  .
@@ -537,7 +520,7 @@ Categories=''' + self.Categories)
         self.askyesno()
         if self.ans == 'y':
             os.chdir(self.options.debdir)
-            self.util.execSystemCommand('reprepro -S web -P extra -A i386 -Vb ../mozilla-apt-repository includedeb all ./'+self.packagename+'_' + self.releaseVersion + '-0ubuntu' + self.options.debversion + '_i386.deb')
+            self.util.execSystemCommand('reprepro -S web -P extra -A ' + self.debarch[self.options.arch] + ' -Vb ../mozilla-apt-repository includedeb all ./'+self.packagename+'_' + self.releaseVersion + '-0ubuntu' + self.options.debversion + '_' + self.debarch[self.options.arch] + '.deb')
         else:
             print "\nOK, not updating repository...\n"
     
@@ -592,13 +575,7 @@ class FirefoxInstaller(MozillaInstaller):
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/" + self.packageFilename, 'includewithtest':True})
-    
-    def getMD5Sum(self): #don't need, blank out
-        pass
-        
-    def verifyMD5Sum(self): #don't need, blank out
-        pass
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
     def createMenuItem(self):
         #self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
@@ -627,14 +604,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/" + self.packageFilename, 'includewithtest':True})
-    
-    def getMD5Sum(self): #don't need, blank out
-        pass
-        
-    def verifyMD5Sum(self): #don't need, blank out
-        pass
-        
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
     def createMenuItem(self):
         #self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default256.png"
@@ -657,12 +627,58 @@ class SeamonkeyInstaller(MozillaInstaller):
         self.releaseVersion = re.search(r'seamonkey\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
     
     def downloadPackage(self): # done, self.packageFilename
-        MozillaInstaller.downloadPackage(self)
+        if self.options.arch == 'i686':
+            MozillaInstaller.downloadPackage(self)
+        else:
+            print "Retrieving package name for", self.options.package.capitalize(), "..."
+            for mirror in self.options.mirrors:
+                try:
+                    self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/contrib/ | grep '" + self.options.package + "' | grep 'tar.bz2' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                    print "Success!: " + self.packageFilename
+                    break
+                except SystemCommandExecutionError:
+                    print "Download error. Trying again, hoping for a different mirror."
+                    time.sleep(2)
+            else:
+                print "Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url
+                sys.exit(1)
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-i686/en-US/" + self.packageFilename, 'includewithtest':True})
+        if self.options.arch == 'i686':
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+        else:
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename, 'includewithtest':True})
+
+    def getMD5Sum(self): # done, self.sigFilename
+        self.sigFilename = self.packageFilename + ".md5"
+        print "\nDownloading Seamonkey MD5 sums from the Mozilla site\n"
+
+        if self.options.arch == 'i686':
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/MD5SUMS | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+        else:
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename.replace('tar.bz2', 'MD5SUM') + " > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+
+        # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
+        # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
+        print "demunging: sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename + "...\n" 
+        self.util.execSystemCommand("sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
+
+    def verifyMD5Sum(self):
+        print "\nVerifying Seamonkey MD5 sum\n"
+        returncode = os.system("md5sum -c " + self.sigFilename)
+        if returncode:
+            print "MD5 sum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n"
+            print "Would you like to delete those two files now? [y/n]? "
+            self.askyesno()
+            if self.ans == 'y':
+                print "\nOK, deleting files and exiting.\n"
+                os.remove(self.packageFilename)
+                os.remove(self.sigFilename)
+            else:
+                print "OK, exiting without deleting files.\n"
+            sys.exit(1)
 
     def downloadGPGSignature(self): #don't need this for seamonkey, blank it out
         pass
