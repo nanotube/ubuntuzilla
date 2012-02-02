@@ -199,7 +199,7 @@ class BaseStarter:
         parser.add_option("-v", "--debversion", action="store", dest="debversion", help="The ubuntu-version of the package to create. To be used in case a bad package was pushed out, and users should be upgraded to a fresh repack. [default: %default]")
         parser.add_option("-b", "--debdir", action="store", dest="debdir", help="Directory where to stick the completed .deb file. [default: %default]")
         parser.add_option("-r", "--targetdir", action="store", dest="targetdir", help="installation/uninstallation target directory for the .deb. [default: %default]")
-        parser.add_option("-i", "--arch", type="choice", action="store", dest="arch", choices=['i686','x86_64'], help="which package to work on: firefox, thunderbird, or seamonkey. [default: %default]")
+        parser.add_option("-i", "--arch", type="choice", action="store", dest="arch", choices=['i686','x86_64'], help="choose architecture: i686 or x86_64. [default: %default]")
         parser.add_option("-m", "--mirror", action="callback", callback=prepend_callback, type="string", dest="mirrors", help="Prepend a mozilla mirror server to the default list of mirrors. Use ftp mirrors only. Include path component up to the 'firefox', 'thunderbird', or 'seamonkey' directories. (See http://www.mozilla.org/mirrors.html for list of mirrors). [default: %default]")
         parser.add_option("-k", "--keyservers", action="callback", callback=prepend_callback, type="string", dest="keyservers", help="Prepend a pgp keyserver to the default list of keyservers. [default: %default]")
         
