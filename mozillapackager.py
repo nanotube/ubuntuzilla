@@ -215,8 +215,7 @@ class BaseStarter:
                 debdir=os.getcwd(),
                 targetdir="/opt",
                 arch="i686",
-                mirrors=['mozilla.isc.org/pub/mozilla.org/',
-                        'mozilla.ussg.indiana.edu/pub/mozilla.org/',
+                mirrors=['mozilla.ussg.indiana.edu/pub/mozilla.org/',
                         'ftp.osuosl.org/pub/mozilla.org/',
                         'mozilla.cs.utah.edu/pub/mozilla.org/',
                         'mozilla.mirrors.tds.net/pub/mozilla.org/',
@@ -294,7 +293,7 @@ class MozillaInstaller:
             if not self.options.skipgpg:
                 self.downloadGPGSignature()
                 self.getMozillaGPGKey()
-                self.verifyGPGSignature()
+                #self.verifyGPGSignature()
             self.getMD5Sum()
             self.verifyMD5Sum()
             self.createDebStructure()
@@ -360,10 +359,11 @@ class MozillaInstaller:
         
         
     def downloadGPGSignature(self): # done, self.sigFilename
-        self.sigFilename = self.packageFilename + ".asc"
-        print "\nDownloading " + self.options.package.capitalize() + " signature from the Mozilla site\n"
+        pass
+        #self.sigFilename = self.packageFilename + ".asc"
+        #print "\nDownloading " + self.options.package.capitalize() + " signature from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve GPG key. This may be due to transient network problems, so try again later. Exiting.")
+        #self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve signature file. This may be due to transient network problems, so try again later. Exiting.")
         
     def getMozillaGPGKey(self):
         ''' If key doesn't already exist on the system, retrieve key from keyserver.
@@ -399,9 +399,45 @@ class MozillaInstaller:
 
     def verifyGPGSignature(self):
         print "\nVerifying signature...\nNote: do not worry about \"untrusted key\" warnings. That is normal behavior for newly imported keys.\n"
-        returncode = os.system("gpg --verify " + self.sigFilename + " " + self.packageFilename)
+        #returncode = os.system("gpg --verify " + self.sigFilename + " " + self.packageFilename)
+        returncode = os.system("gpg --verify SHA512SUMS.asc SHA512SUMS")
         if returncode:
-            print "Key verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n"
+            print "GPG signature verification failed. This is most likely due to a corrupt download. You should delete files 'SHA512SUMS', 'SHA512SUMS.asc', '", self.packageFilename, "', and run the script again.\n"
+            print "Would you like to delete those files now? [y/n]? "
+            self.askyesno()
+            if self.ans == 'y':
+                print "\nOK, deleting files and exiting.\n"
+                os.remove(self.packageFilename)
+                os.remove('SHA512SUMS')
+                os.remove('SHA512SUMS.asc')
+            else:
+                print "OK, exiting without deleting files.\n"
+            sys.exit(1)
+
+    def getMD5Sum(self): # ok this is not necessarily md5...
+        print "\nDownloading " + self.options.package.capitalize() + " checksums from the Mozilla site\n"
+        self.sigFilename = self.packageFilename + ".sha512"
+
+        
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS.asc", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
+        
+        self.verifyGPGSignature()
+        
+        os.system("grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' SHA512SUMS > " + self.sigFilename)
+        os.remove('SHA512SUMS')
+        os.remove('SHA512SUMS.asc')
+
+        # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
+        # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
+        print "demunging: sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename + "...\n" 
+        self.util.execSystemCommand("sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
+
+    def verifyMD5Sum(self):
+        print "\nVerifying checksum\n"
+        returncode = os.system("sha512sum -c " + self.sigFilename)
+        if returncode:
+            print "Checksum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n"
             print "Would you like to delete those two files now? [y/n]? "
             self.askyesno()
             if self.ans == 'y':
@@ -412,11 +448,6 @@ class MozillaInstaller:
                 print "OK, exiting without deleting files.\n"
             sys.exit(1)
 
-    def getMD5Sum(self):
-        pass
-
-    def verifyMD5Sum(self):
-        pass
 
     def createDebStructure(self):
         self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
