@@ -529,7 +529,6 @@ Exec=''' + self.options.package + ''' %u
 Icon=''' + self.iconPath + '''
 Terminal=false
 X-MultipleArgs=false
-StartupNotify=true
 StartupWMClass=''' + self.wmClass + '''
 Type=Application
 Categories=''' + self.Categories)
@@ -642,7 +641,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Mail Client"
         self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
-        self.wmClass = "Thunderbird-bin" # as determined by 'xprop WM_CLASS'
+        self.wmClass = "Thunderbird" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;Email;"
         MozillaInstaller.createMenuItem(self)
 
