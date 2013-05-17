@@ -348,7 +348,7 @@ class MozillaInstaller:
         print "Retrieving package name for", self.options.package.capitalize(), "..."
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | grep -v 'json' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
                 print "Success!: " + self.packageFilename
                 break
             except SystemCommandExecutionError:
