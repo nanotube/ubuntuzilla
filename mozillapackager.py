@@ -532,7 +532,8 @@ Terminal=false
 X-MultipleArgs=false
 StartupWMClass=''' + self.wmClass + '''
 Type=Application
-Categories=''' + self.Categories)
+Categories=''' + self.Categories + '''
+MimeType=''' + self.mimeType)
         menuitemfile.close()
         self.util.execSystemCommand(executionstring="sudo chown root:root " + menufilename)
         self.util.execSystemCommand(executionstring="sudo chmod 644 " + menufilename)
@@ -615,6 +616,7 @@ class FirefoxInstaller(MozillaInstaller):
         self.Comment = "Web Browser"
         self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;WebBrowser;"
+        self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
         MozillaInstaller.createMenuItem(self)
         
 class ThunderbirdInstaller(MozillaInstaller):
@@ -644,6 +646,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
         self.wmClass = "Thunderbird" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;Email;"
+        self.mimeType = "x-scheme-handler/mailto;application/x-xpinstall;"
         MozillaInstaller.createMenuItem(self)
 
 class SeamonkeyInstaller(MozillaInstaller):
@@ -727,6 +730,7 @@ class SeamonkeyInstaller(MozillaInstaller):
         self.Comment = "Web Browser, Email/News Client, HTML Editor, IRC Client"
         self.wmClass = "SeaMonkey" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;WebBrowser;Email;WebDevelopment;IRCClient;"
+        self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;x-scheme-handler/mailto;"
         MozillaInstaller.createMenuItem(self)
         
 if __name__ == '__main__':
