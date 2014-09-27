@@ -545,7 +545,7 @@ MimeType=''' + self.mimeType)
     def createDeb(self):
         os.chdir(os.path.join('/tmp',self.options.package + 'debbuild'))
         self.util.execSystemCommand('sudo chown -R root:root debian')
-        self.util.execSystemCommand('dpkg-deb --build debian ' + self.options.debdir)
+        self.util.execSystemCommand('dpkg-deb -Zgzip --build debian ' + self.options.debdir)
     
     def createRepository(self):
         print "Would you like to update the local repository with the package just created [y/n]? "
