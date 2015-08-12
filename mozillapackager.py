@@ -215,16 +215,16 @@ class BaseStarter:
                 debdir=os.getcwd(),
                 targetdir="/opt",
                 arch="i686",
-                mirrors=['ftp.mozilla.org/pub/mozilla.org/',
-                        'mozilla.ussg.indiana.edu/pub/mozilla.org/',
-                        'ftp.osuosl.org/pub/mozilla.org/',
-                        'mozilla.cs.utah.edu/pub/mozilla.org/',
-                        'mozilla.mirrors.tds.net/pub/mozilla.org/',
-                        'ftp.scarlet.be/pub/mozilla.org/',
-                        'ftp.uni-erlangen.de/pub/mozilla.org/',
-                        'sunsite.rediris.es/pub/mozilla.org/',
-                        'www.gtlib.gatech.edu/pub/mozilla.org/',
-                        'releases.mozilla.org/pub/mozilla.org/'],
+                mirrors=['http://releases.mozilla.org/pub/mozilla.org/',
+                        'ftp://ftp.mozilla.org/pub/mozilla.org/',
+                        'ftp://mozilla.ussg.indiana.edu/pub/mozilla.org/',
+                        'ftp://ftp.osuosl.org/pub/mozilla.org/',
+                        'ftp://mozilla.cs.utah.edu/pub/mozilla.org/',
+                        'ftp://mozilla.mirrors.tds.net/pub/mozilla.org/',
+                        'ftp://ftp.scarlet.be/pub/mozilla.org/',
+                        'ftp://ftp.uni-erlangen.de/pub/mozilla.org/',
+                        'ftp://sunsite.rediris.es/pub/mozilla.org/',
+                        'ftp://www.gtlib.gatech.edu/pub/mozilla.org/'],
                 keyservers = ['subkeys.pgp.net',
                         'pgpkeys.mit.edu',
                         'pgp.mit.edu',
@@ -348,7 +348,7 @@ class MozillaInstaller:
         print "Retrieving package name for", self.options.package.capitalize(), "..."
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | grep -v 'json' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | grep -v 'Index' | grep -v 'json' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
                 print "Success!: " + self.packageFilename
                 break
             except SystemCommandExecutionError:
@@ -420,8 +420,8 @@ class MozillaInstaller:
         self.sigFilename = self.packageFilename + ".sha512"
 
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS.asc", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS.asc", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
         
         self.verifyGPGSignature()
         
@@ -607,7 +607,7 @@ class FirefoxInstaller(MozillaInstaller):
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
     def createMenuItem(self):
         #self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
@@ -637,7 +637,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
     def createMenuItem(self):
         #self.iconPath = self.options.targetdir + "/" + self.options.package + "/chrome/icons/default/default256.png"
@@ -667,7 +667,7 @@ class SeamonkeyInstaller(MozillaInstaller):
             print "Retrieving package name for", self.options.package.capitalize(), "..."
             for mirror in self.options.mirrors:
                 try:
-                    self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump ftp://" + mirror + self.options.package + "/releases/" + self.releaseVersion + "/contrib/ | grep '" + self.options.package + "' | grep 'tar.bz2' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                    self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/contrib/ | grep '" + self.options.package + "' | grep 'tar.bz2' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
                     print "Success!: " + self.packageFilename
                     break
                 except SystemCommandExecutionError:
@@ -681,18 +681,18 @@ class SeamonkeyInstaller(MozillaInstaller):
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
         if self.options.arch == 'i686':
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
         else:
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename, 'includewithtest':True})
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename, 'includewithtest':True})
 
     def getMD5Sum(self): # done, self.sigFilename
         self.sigFilename = self.packageFilename + ".md5"
         print "\nDownloading Seamonkey MD5 sums from the Mozilla site\n"
 
         if self.options.arch == 'i686':
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/MD5SUMS | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/MD5SUMS | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
         else:
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - ftp://" + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename.replace('tar.bz2', 'MD5SUM') + " > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename.replace('tar.bz2', 'MD5SUM') + " > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
 
         # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
         # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
