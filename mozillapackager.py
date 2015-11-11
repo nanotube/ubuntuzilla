@@ -451,6 +451,10 @@ class MozillaInstaller:
 
 
     def createDebStructure(self):
+        provides = 'gnome-www-browser, iceweasel, www-browser, '
+        if self.options.package == 'thunderbird':
+            provides = 'mail-reader, '
+        
         self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
         self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir)
         self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir + self.options.targetdir)
@@ -464,6 +468,7 @@ class MozillaInstaller:
 Version: ''' + self.releaseVersion + '''-0ubuntu''' + self.options.debversion + '''
 Maintainer: ''' + self.version.author + ''' <''' + self.version.author_email + '''>
 Architecture: ''' + self.debarch[self.options.arch] + '''
+Provides: '''+ provides + self.options.package+'''
 Description: Mozilla '''+self.options.package.capitalize()+''', official Mozilla build, packaged for Ubuntu by the Ubuntuzilla project.
  This is the unmodified Mozilla release binary of '''+self.options.package.capitalize()+''', packaged into a .deb by the Ubuntuzilla project.
  .
@@ -474,7 +479,6 @@ Description: Mozilla '''+self.options.package.capitalize()+''', official Mozilla
  .
  Mozilla project homepage:
  http://www.mozilla.com
-Provides: '''+self.options.package+'''
 ''')
         # write the preinst and postrm scripts to divert /usr/bin/<package> links
         open('preinst', 'w').write('''#!/bin/sh
