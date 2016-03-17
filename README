@@ -1,0 +1,5 @@
+This code is for packaging official Mozilla releases of Firefox, Thunderbird, and Seamonkey into .deb packages within an APT repository for use with Debian-derivative systems. 
+
+It is currently being used to maintain the Ubuntuzilla repository which is hosted at https://sourceforge.net/projects/ubuntuzilla/
+
+Detailed instructions and documentation are also available on the Sourceforge project site.
