@@ -215,16 +215,7 @@ class BaseStarter:
                 debdir=os.getcwd(),
                 targetdir="/opt",
                 arch="i686",
-                mirrors=['http://releases.mozilla.org/pub/mozilla.org/',
-                        'ftp://ftp.mozilla.org/pub/mozilla.org/',
-                        'ftp://mozilla.ussg.indiana.edu/pub/mozilla.org/',
-                        'ftp://ftp.osuosl.org/pub/mozilla.org/',
-                        'ftp://mozilla.cs.utah.edu/pub/mozilla.org/',
-                        'ftp://mozilla.mirrors.tds.net/pub/mozilla.org/',
-                        'ftp://ftp.scarlet.be/pub/mozilla.org/',
-                        'ftp://ftp.uni-erlangen.de/pub/mozilla.org/',
-                        'ftp://sunsite.rediris.es/pub/mozilla.org/',
-                        'ftp://www.gtlib.gatech.edu/pub/mozilla.org/'],
+                mirrors=['http://releases.mozilla.org/pub/',],
                 keyservers = ['subkeys.pgp.net',
                         'pgpkeys.mit.edu',
                         'pgp.mit.edu',
@@ -694,14 +685,14 @@ class SeamonkeyInstaller(MozillaInstaller):
         print "\nDownloading Seamonkey MD5 sums from the Mozilla site\n"
 
         if self.options.arch == 'i686':
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/MD5SUMS | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename.replace('tar.bz2', 'checksums') + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+            self.util.execSystemCommand("sed -i 's#md5.*linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
         else:
             self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename.replace('tar.bz2', 'MD5SUM') + " > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+            self.util.execSystemCommand("sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
 
         # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
         # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
-        print "demunging: sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename + "...\n" 
-        self.util.execSystemCommand("sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
 
     def verifyMD5Sum(self):
         print "\nVerifying Seamonkey MD5 sum\n"
