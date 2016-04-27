@@ -416,14 +416,10 @@ class MozillaInstaller:
         
         self.verifyGPGSignature()
         
-        os.system("grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' SHA512SUMS > " + self.sigFilename)
+        # extract desired shasum line, remove extra junk from filepath/name.
+        os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + self.options.package + " | grep tar.bz2 | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
         os.remove('SHA512SUMS')
         os.remove('SHA512SUMS.asc')
-
-        # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
-        # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
-        print "demunging: sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename + "...\n" 
-        self.util.execSystemCommand("sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
 
     def verifyMD5Sum(self):
         print "\nVerifying checksum\n"
