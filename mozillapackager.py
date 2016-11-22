@@ -449,7 +449,11 @@ class MozillaInstaller:
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','share','applications'))
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','share','pixmaps'))
         self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'DEBIAN'))
-                
+        
+        # to push out the new repository signing key, need to upgrade from DSA so we can use SHA2 and stop the weak digest warnings.
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'etc','apt','trusted.gpg.d'))
+        self.util.execSystemCommand(executionstring="cp /etc/apt/trusted.gpg.d/ubuntuzilla.gpg " + os.path.join(self.debdir, 'etc','apt','trusted.gpg.d','ubuntuzilla.' + self.options.package + '.gpg'))
+        
         os.chdir(os.path.join(self.debdir, 'DEBIAN'))
         open('control', 'w').write('''Package: ''' + self.packagename + '''
 Version: ''' + self.releaseVersion + '''-0ubuntu''' + self.options.debversion + '''
