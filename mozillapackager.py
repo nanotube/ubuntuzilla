@@ -191,7 +191,7 @@ class BaseStarter:
                         usage="%prog [options]\n or \n  python %prog [options]")
         parser.add_option("-d", "--debug", action="store_true", dest="debug", help="debug mode (print some extra debug output). [default: %default]")
         parser.add_option("-t", "--test", action="store_true", dest="test", help="make a dry run, without actually installing anything. [default: %default]")
-        parser.add_option("-p", "--package", type="choice", action="store", dest="package", choices=['firefox','thunderbird','seamonkey'], help="which package to work on: firefox, thunderbird, or seamonkey. [default: %default]")
+        parser.add_option("-p", "--package", type="choice", action="store", dest="package", choices=['firefox','firefoxesr','thunderbird','seamonkey'], help="which package to work on: firefox, firefoxesr, thunderbird, or seamonkey. [default: %default]")
         parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['builddeb','adddebtorepo','uploadrepo','cleanup','all',], help="what to do with the selected package: builddeb creates the .deb; adddebtorepo updates the repository; uploadrepo uploads the repository; cleanup removes temporary files; all does all of this from start to finish. [default: %default]")
         parser.add_option("-g", "--skipgpg", action="store_true", dest="skipgpg", help="skip gpg signature verification. [default: %default]")
         parser.add_option("-u", "--unattended", action="store_true", dest="unattended", help="run in unattended mode. [default: %default]")
@@ -231,6 +231,9 @@ class BaseStarter:
         self.check_uid()
         if self.options.package == 'firefox':
             fi = FirefoxInstaller(self.options)
+            fi.start()
+        elif self.options.package == 'firefoxesr':
+            fi = FirefoxESRInstaller(self.options)
             fi.start()
         elif self.options.package == 'thunderbird':
             ti = ThunderbirdInstaller(self.options)
@@ -337,9 +340,13 @@ class MozillaInstaller:
     def downloadPackage(self): 
         # we are going to dynamically determine the package name
         print "Retrieving package name for", self.options.package.capitalize(), "..."
+        if self.options.package == 'firefoxesr':
+            package = 'firefox'
+        else:
+            package = self.options.package
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | grep -v 'Index' | grep -v 'json' | grep -v '\.sdk\.' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | grep -v 'Index' | grep -v 'json' | grep -v '\.sdk\.' | awk '{ print substr($0,index($0, \"" + package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
                 print "Success!: " + self.packageFilename
                 break
             except SystemCommandExecutionError:
@@ -409,15 +416,19 @@ class MozillaInstaller:
     def getMD5Sum(self): # ok this is not necessarily md5...
         print "\nDownloading " + self.options.package.capitalize() + " checksums from the Mozilla site\n"
         self.sigFilename = self.packageFilename + ".sha512"
+        if self.options.package == 'firefoxesr':
+            package = 'firefox'
+        else:
+            package = self.options.package
 
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/SHA512SUMS.asc", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv " + "%mirror%" + package + "/releases/" + self.releaseVersion + "/SHA512SUMS", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv " + "%mirror%" + package + "/releases/" + self.releaseVersion + "/SHA512SUMS.asc", 'includewithtest':True}, errormsg="Failed to retrieve checksums. This may be due to transient network problems, so try again later. Exiting.")
         
         self.verifyGPGSignature()
         
         # extract desired shasum line, remove extra junk from filepath/name.
-        os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + self.options.package + " | grep tar.bz2 | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
+        os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + package + " | grep tar.bz2 | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
         os.remove('SHA512SUMS')
         os.remove('SHA512SUMS.asc')
 
@@ -613,6 +624,36 @@ class FirefoxInstaller(MozillaInstaller):
         self.Categories = "Network;WebBrowser;"
         self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
         MozillaInstaller.createMenuItem(self)
+
+class FirefoxESRInstaller(MozillaInstaller):
+    '''This class works with the firefox package'
+    '''
+    def __init__(self,options):
+        MozillaInstaller.__init__(self, options)
+
+    def getLatestVersion(self):
+        MozillaInstaller.getLatestVersion(self)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - https://www.mozilla.org/en-US/firefox/organizations/all/ | grep 'lang=en-US' | grep 'product=firefox-[0-9]' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'firefox\-(([0-9]+\.)+[0-9]+esr)',self.releaseVersion).group(1)
+        
+    def downloadPackage(self): # done, self.packageFilename
+        MozillaInstaller.downloadPackage(self)
+        #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
+        
+        print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
+        
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + 'firefox' + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+    
+    def createMenuItem(self):
+        #self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
+        self.iconPath = self.options.package + "-mozilla-build"
+        self.GenericName = "Browser"
+        self.Comment = "Web Browser"
+        self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
+        self.Categories = "Network;WebBrowser;"
+        self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
+        MozillaInstaller.createMenuItem(self)
+
         
 class ThunderbirdInstaller(MozillaInstaller):
     '''This class works with the thunderbird package'
