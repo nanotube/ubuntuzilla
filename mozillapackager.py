@@ -593,8 +593,8 @@ class FirefoxInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.mozilla.com |grep 'product=firefox-[0-9]' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
-        self.releaseVersion = re.search(r'firefox\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -S --tries=5 -O - \"https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US\" 2>&1 | grep \"Location:\" -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'releases/(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
         
     def downloadPackage(self): # done, self.packageFilename
         MozillaInstaller.downloadPackage(self)
