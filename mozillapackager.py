@@ -340,13 +340,9 @@ class MozillaInstaller:
     def downloadPackage(self): 
         # we are going to dynamically determine the package name
         print "Retrieving package name for", self.options.package.capitalize(), "..."
-        if self.options.package == 'firefoxesr':
-            package = 'firefox'
-        else:
-            package = self.options.package
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + package + "' | grep -v '\.asc' |grep -v 'ftp://' | grep -v 'checksums' | grep -v 'Index' | grep -v 'json' | grep -v '\.sdk\.' | awk '{ print substr($0,index($0, \"" + package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
                 print "Success!: " + self.packageFilename
                 break
             except SystemCommandExecutionError:
@@ -604,8 +600,8 @@ class FirefoxInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.mozilla.com |grep 'product=firefox-[0-9]' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
-        self.releaseVersion = re.search(r'firefox\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -S --tries=5 -O - \"https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US\" 2>&1 | grep \"Location:\" -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'releases/(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
         
     def downloadPackage(self): # done, self.packageFilename
         MozillaInstaller.downloadPackage(self)
