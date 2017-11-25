@@ -191,7 +191,7 @@ class BaseStarter:
                         usage="%prog [options]\n or \n  python %prog [options]")
         parser.add_option("-d", "--debug", action="store_true", dest="debug", help="debug mode (print some extra debug output). [default: %default]")
         parser.add_option("-t", "--test", action="store_true", dest="test", help="make a dry run, without actually installing anything. [default: %default]")
-        parser.add_option("-p", "--package", type="choice", action="store", dest="package", choices=['firefox','firefoxesr','thunderbird','seamonkey'], help="which package to work on: firefox, firefoxesr, thunderbird, or seamonkey. [default: %default]")
+        parser.add_option("-p", "--package", type="choice", action="store", dest="package", choices=['firefox','firefox-esr','thunderbird','seamonkey'], help="which package to work on: firefox, firefoxesr, thunderbird, or seamonkey. [default: %default]")
         parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['builddeb','adddebtorepo','uploadrepo','cleanup','all',], help="what to do with the selected package: builddeb creates the .deb; adddebtorepo updates the repository; uploadrepo uploads the repository; cleanup removes temporary files; all does all of this from start to finish. [default: %default]")
         parser.add_option("-g", "--skipgpg", action="store_true", dest="skipgpg", help="skip gpg signature verification. [default: %default]")
         parser.add_option("-u", "--unattended", action="store_true", dest="unattended", help="run in unattended mode. [default: %default]")
@@ -232,7 +232,7 @@ class BaseStarter:
         if self.options.package == 'firefox':
             fi = FirefoxInstaller(self.options)
             fi.start()
-        elif self.options.package == 'firefoxesr':
+        elif self.options.package == 'firefox-esr':
             fi = FirefoxESRInstaller(self.options)
             fi.start()
         elif self.options.package == 'thunderbird':
@@ -412,7 +412,7 @@ class MozillaInstaller:
     def getMD5Sum(self): # ok this is not necessarily md5...
         print "\nDownloading " + self.options.package.capitalize() + " checksums from the Mozilla site\n"
         self.sigFilename = self.packageFilename + ".sha512"
-        if self.options.package == 'firefoxesr':
+        if self.options.package == 'firefox-esr':
             package = 'firefox'
         else:
             package = self.options.package
@@ -629,17 +629,36 @@ class FirefoxESRInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - https://www.mozilla.org/en-US/firefox/organizations/all/ | grep 'lang=en-US' | grep 'product=firefox-[0-9]' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
-        self.releaseVersion = re.search(r'firefox\-(([0-9]+\.)+[0-9]+esr)',self.releaseVersion).group(1)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -S --tries=5 -O - \"https://download.mozilla.org/?product=firefox-esr-latest&os=linux64&lang=en-US\" 2>&1 | grep \"Location:\" -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'releases/(([0-9]+\.)+[0-9]+esr)',self.releaseVersion).group(1)
         
     def downloadPackage(self): # done, self.packageFilename
-        MozillaInstaller.downloadPackage(self)
+        # we are going to dynamically determine the package name
+        print "Retrieving package name for Firefox ESR..."
+        for mirror in self.options.mirrors:
+            try:
+                self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + "firefox/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep 'firefox.*tar.bz2' | awk '{print $2}'", numlines=1)
+                print "Success!: " + self.packageFilename
+                break
+            except SystemCommandExecutionError:
+                print "Download error. Trying again, hoping for a different mirror."
+                time.sleep(2)
+        else:
+            print "Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url
+            sys.exit(1)
+
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
         
-        print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
+        print "\nDownloading Firefox ESR archive from the Mozilla site\n"
         
         self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + 'firefox' + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
+    def extractArchive(self):
+        MozillaInstaller.extractArchive(self)
+        print self.debdir
+        self.util.execSystemCommand(executionstring="sudo mv " + self.debdir + self.options.targetdir + "/firefox" + " " + self.debdir + self.options.targetdir + "/firefox-esr")
+
+        
     def createMenuItem(self):
         #self.iconPath = self.options.targetdir + "/" + self.options.package + "/icons/mozicon128.png"
         self.iconPath = self.options.package + "-mozilla-build"
@@ -648,7 +667,70 @@ class FirefoxESRInstaller(MozillaInstaller):
         self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;WebBrowser;"
         self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
-        MozillaInstaller.createMenuItem(self)
+        
+        print"Creating Applications menu item for Firefox ESR.\n"
+        os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
+        menufilename = self.options.package + '-mozilla-build.desktop'
+        menuitemfile = open(menufilename, "w+")
+        menuitemfile.write('''[Desktop Entry]
+Encoding=UTF-8
+Name=Mozilla Build of Firefox ESR
+GenericName=''' + self.GenericName + '''
+Comment=''' + self.Comment + '''
+Exec=firefox-esr %u
+Icon=''' + self.iconPath + '''
+Terminal=false
+X-MultipleArgs=false
+StartupWMClass=''' + self.wmClass + '''
+Type=Application
+Categories=''' + self.Categories + '''
+MimeType=''' + self.mimeType)
+        menuitemfile.close()
+        self.util.execSystemCommand(executionstring="sudo chown root:root " + menufilename)
+        self.util.execSystemCommand(executionstring="sudo chmod 644 " + menufilename)
+        
+        os.chdir(os.path.join(self.debdir, 'usr','share','pixmaps'))
+        self.util.execSystemCommand(executionstring="cp " + self.options.debdir + "/" + self.options.package + "-mozilla-build.png ./")
+
+        
+    def createDebStructure(self):
+        provides = 'gnome-www-browser, iceweasel, www-browser, '
+        
+        self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
+        self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir)
+        self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir + self.options.targetdir)
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','bin'))
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','share','applications'))
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'usr','share','pixmaps'))
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'DEBIAN'))
+        
+        # to push out the new repository signing key, need to upgrade from DSA so we can use SHA2 and stop the weak digest warnings.
+        self.util.execSystemCommand(executionstring="mkdir -p " + os.path.join(self.debdir, 'etc','apt','trusted.gpg.d'))
+        self.util.execSystemCommand(executionstring="cp /etc/apt/trusted.gpg.d/ubuntuzilla.gpg " + os.path.join(self.debdir, 'etc','apt','trusted.gpg.d','ubuntuzilla.' + self.options.package + '.gpg'))
+        
+        os.chdir(os.path.join(self.debdir, 'DEBIAN'))
+        open('control', 'w').write('''Package: firefox-esr-mozilla-build
+Version: ''' + self.releaseVersion + '''-0ubuntu''' + self.options.debversion + '''
+Maintainer: ''' + self.version.author + ''' <''' + self.version.author_email + '''>
+Architecture: ''' + self.debarch[self.options.arch] + '''
+Provides: '''+ provides + '''firefox
+Description: Mozilla Firefox ESR, official Mozilla build, packaged for Ubuntu by the Ubuntuzilla project.
+ This is the unmodified Mozilla release binary of Firefox ESR, packaged into a .deb by the Ubuntuzilla project.
+ .
+ It is strongly recommended that you back up your application profile data before installing, just in case. We really mean it! If you use Firefox ESR along with the mainline Firefox release, it is recommended to use separate profiles.
+ .
+ The binary is linked as /usr/bin/firefox-esr.
+ .
+ Ubuntuzilla project homepage:
+ ''' + self.version.url + '''
+ .
+ Mozilla project homepage:
+ http://www.mozilla.com
+''')
+
+    def createSymlinks(self):
+        os.chdir(os.path.join(self.debdir, 'usr','bin'))
+        self.util.execSystemCommand('sudo ln -s ' + os.path.join(self.options.targetdir, 'firefox-esr/firefox') + ' ' + 'firefox-esr')
 
         
 class ThunderbirdInstaller(MozillaInstaller):
