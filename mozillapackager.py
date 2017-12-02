@@ -192,7 +192,7 @@ class BaseStarter:
         parser.add_option("-d", "--debug", action="store_true", dest="debug", help="debug mode (print some extra debug output). [default: %default]")
         parser.add_option("-t", "--test", action="store_true", dest="test", help="make a dry run, without actually installing anything. [default: %default]")
         parser.add_option("-p", "--package", type="choice", action="store", dest="package", choices=['firefox','firefox-esr','thunderbird','seamonkey'], help="which package to work on: firefox, firefoxesr, thunderbird, or seamonkey. [default: %default]")
-        parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['builddeb','adddebtorepo','uploadrepo','cleanup','all',], help="what to do with the selected package: builddeb creates the .deb; adddebtorepo updates the repository; uploadrepo uploads the repository; cleanup removes temporary files; all does all of this from start to finish. [default: %default]")
+        parser.add_option("-a", "--action", type="choice", action="store", dest="action", choices=['getversion','builddeb','adddebtorepo','uploadrepo','cleanup','all',], help="what to do with the selected package: builddeb creates the .deb; adddebtorepo updates the repository; uploadrepo uploads the repository; cleanup removes temporary files; all does all of this from start to finish. [default: %default]")
         parser.add_option("-g", "--skipgpg", action="store_true", dest="skipgpg", help="skip gpg signature verification. [default: %default]")
         parser.add_option("-u", "--unattended", action="store_true", dest="unattended", help="run in unattended mode. [default: %default]")
         #parser.add_option("-l", "--localization", action="store", dest="localization", help="for use with unattended mode only. choose localization (language) for your package of choice. note that the burden is on you to make sure that this localization of your package actually exists. [default: %default]")
@@ -279,9 +279,15 @@ class MozillaInstaller:
         self.debarch = {'i686':'i386','x86_64':'amd64'}
 
     def start(self):
-        self.welcome()
+        if self.options.action in ['builddeb','adddebtorepo','uploadrpo','cleanup','all']:
+            self.welcome()
+        
         self.getLatestVersion()
-        self.confirmLatestVersion()
+        if self.options.action in ['getversion']:
+            print self.releaseVersion
+        
+        if self.options.action in ['builddeb','adddebtorepo','uploadrpo','cleanup','all']:
+            self.confirmLatestVersion()
         
         if self.options.action in ['builddeb','all']:
             self.downloadPackage()
@@ -303,7 +309,8 @@ class MozillaInstaller:
         if self.options.action in ['cleanup','all']:
             self.cleanup()
         
-        self.printSuccessMessage()
+        if self.options.action in ['builddeb','adddebtorepo','uploadrpo','cleanup','all']:
+            self.printSuccessMessage()
 
     def welcome(self):
         print "\nWelcome to Ubuntuzilla Packager version " + self.version.version + "\n\nUbuntuzilla Packager creates a .deb file out of the latest release of Firefox, Thunderbird, or Seamonkey.\n\nThis script will now build the .deb of latest release of the official Mozilla build of " + self.options.package.capitalize() + ". If you run into any problems using this script, or have feature requests, suggestions, or general comments, please visit our website at", self.version.url, "\n"
@@ -311,7 +318,8 @@ class MozillaInstaller:
         print "\nThe action you have requested is: " + bold + self.options.action + unbold + '\n'
 
     def getLatestVersion(self): # done in child, in self.releaseVersion
-        print "Retrieving the version of the latest release of " + self.options.package.capitalize() + " from the Mozilla website..."
+        if self.options.action != 'getversion': # this should only output the version and be quiet otherwise
+            print "Retrieving the version of the latest release of " + self.options.package.capitalize() + " from the Mozilla website..."
         # child-specific implementation comes in here
 
     def confirmLatestVersion(self):
