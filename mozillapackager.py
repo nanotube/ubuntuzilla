@@ -783,40 +783,18 @@ class SeamonkeyInstaller(MozillaInstaller):
         self.releaseVersion = re.search(r'seamonkey\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
     
     def downloadPackage(self): # done, self.packageFilename
-        if self.options.arch == 'i686':
-            MozillaInstaller.downloadPackage(self)
-        else:
-            print "Retrieving package name for", self.options.package.capitalize(), "..."
-            for mirror in self.options.mirrors:
-                try:
-                    self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/contrib/ | grep '" + self.options.package + "' | grep 'tar.bz2' | awk '{ print substr($0,index($0, \"" + self.options.package + "\"))}' | awk '{print $1}' | sed -e 's/\.*$//'", numlines=1)
-                    print "Success!: " + self.packageFilename
-                    break
-                except SystemCommandExecutionError:
-                    print "Download error. Trying again, hoping for a different mirror."
-                    time.sleep(2)
-            else:
-                print "Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url
-                sys.exit(1)
-        #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
+        MozillaInstaller.downloadPackage(self)
         
         print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
         
-        if self.options.arch == 'i686':
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
-        else:
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
 
     def getMD5Sum(self): # done, self.sigFilename
         self.sigFilename = self.packageFilename + ".md5"
         print "\nDownloading Seamonkey MD5 sums from the Mozilla site\n"
 
-        if self.options.arch == 'i686':
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename.replace('tar.bz2', 'checksums') + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
-            self.util.execSystemCommand("sed -i 's#md5.*linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
-        else:
-            self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/contrib/" + self.packageFilename.replace('tar.bz2', 'MD5SUM') + " > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
-            self.util.execSystemCommand("sed -i 's#linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename.replace('tar.bz2', 'checksums') + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.execSystemCommand("sed -i 's#md5.*linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
 
         # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
         # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
