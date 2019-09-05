@@ -779,8 +779,8 @@ class SeamonkeyInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.seamonkey-project.org/ |grep 'product=' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
-        self.releaseVersion = re.search(r'seamonkey\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.seamonkey-project.org/ |grep 'pub/seamonkey/releases/.*/linux.*en-US' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'pub/seamonkey/releases/(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
     
     def downloadPackage(self): # done, self.packageFilename
         MozillaInstaller.downloadPackage(self)
