@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##
 ##############################################################################
 ##
@@ -59,7 +59,7 @@ import time
 import shutil
 import subprocess
 import dbus
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import traceback
 import signal # used to workaround the python sigpipe bug
 
@@ -103,7 +103,7 @@ class UtilityFunctions:
         Result is a list, one line per item. 
         If numlines is 1, then result is a string.'''
         
-        p = subprocess.Popen(executionstring, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        p = subprocess.Popen(executionstring, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, encoding="UTF-8")
         returncode = p.wait()
         result = p.stdout.readlines()
         
@@ -114,11 +114,11 @@ class UtilityFunctions:
                 returncode = 1
         
         if returncode != 0:
-            print >>sys.stderr, executionstring
-            print >>sys.stderr, errormessage
-            print >>sys.stderr, "Process returned code", returncode
-            print >>sys.stderr, result
-            raise SystemCommandExecutionError, "Command has not completed successfully. If this problem persists, please seek help at our website, " + self.version.url
+            print(executionstring, file=sys.stderr)
+            print(errormessage, file=sys.stderr)
+            print("Process returned code", returncode, file=sys.stderr)
+            print(result, file=sys.stderr)
+            raise SystemCommandExecutionError("Command has not completed successfully. If this problem persists, please seek help at our website, " + self.version.url)
         
         else:
             for i in range(0,len(result)):
@@ -143,10 +143,10 @@ class UtilityFunctions:
         if (not self.options.test) or includewithtest:
             returncode = subprocess.call(executionstring, preexec_fn=self.subprocess_setup, shell=True)
             if returncode:
-                print >>sys.stderr, executionstring
-                print >>sys.stderr, errormessage
-                print >>sys.stderr, "Process returned code", returncode
-                raise SystemCommandExecutionError, "Command has not completed successfully. If this problem persists, please seek help at our website, " + self.version.url
+                print(executionstring, file=sys.stderr)
+                print(errormessage, file=sys.stderr)
+                print("Process returned code", returncode, file=sys.stderr)
+                raise SystemCommandExecutionError("Command has not completed successfully. If this problem persists, please seek help at our website, " + self.version.url)
     
     def robustDownload(self, argsdict, errormsg="Download failed. This may be due to transient network problems, so try again later. Exiting.", repeat=5, onexit = sys.exit):
         '''try the download several times, in case we get a bad mirror (happens 
@@ -162,10 +162,10 @@ class UtilityFunctions:
                 self.execSystemCommand(**argsdict)
                 break
             except SystemCommandExecutionError:
-                print "Error downloading. Trying again, hoping for a different mirror."
+                print("Error downloading. Trying again, hoping for a different mirror.")
                 time.sleep(2)
         else:
-            print errormsg
+            print(errormsg)
             onexit(1)
 
 
@@ -224,7 +224,7 @@ class BaseStarter:
         
         (self.options, args) = parser.parse_args()
         if self.options.debug:
-            print "Your commandline options:\n", self.options
+            print("Your commandline options:\n", self.options)
         
     def start(self):
         #if self.options.action != 'updateubuntuzilla':
@@ -247,18 +247,18 @@ class BaseStarter:
     
     def check_uid(self):
         if os.getuid() == 0:
-            print "\nYou appear to be trying to run Ubuntuzilla as root.\nUbuntuzilla really shouldn't be run as root under normal circumstances.\nYou are advised to exit now and run it as regular user, without 'sudo'.\nDo not continue, unless you know what you're doing.\nDo you want to exit now?"
+            print("\nYou appear to be trying to run Ubuntuzilla as root.\nUbuntuzilla really shouldn't be run as root under normal circumstances.\nYou are advised to exit now and run it as regular user, without 'sudo'.\nDo not continue, unless you know what you're doing.\nDo you want to exit now?")
             while 1:
-                ans = raw_input("Please enter 'y' or 'n': ")
+                ans = input("Please enter 'y' or 'n': ")
                 if ans in ['y','Y','n','N']:
                     ans = ans.lower()
                     break
             
             if ans == 'y':
-                print "Please run Ubuntuzilla again, without sudo."
+                print("Please run Ubuntuzilla again, without sudo.")
                 sys.exit()
             else:
-                print "Hope you know what you're doing... Continuing..."
+                print("Hope you know what you're doing... Continuing...")
                     
     
 class MozillaInstaller:
@@ -270,9 +270,9 @@ class MozillaInstaller:
         self.util = UtilityFunctions(options)
         self.keySuccess = False
         if self.options.test:
-            print "Testing mode ON."
+            print("Testing mode ON.")
         if self.options.debug:
-            print "Debug mode ON."
+            print("Debug mode ON.")
         os.chdir('/tmp')
         self.debdir = os.path.join('/tmp',self.options.package + 'debbuild', 'debian')
         self.packagename = self.options.package + '-mozilla-build'
@@ -284,7 +284,7 @@ class MozillaInstaller:
         
         self.getLatestVersion()
         if self.options.action in ['getversion']:
-            print self.releaseVersion
+            print(self.releaseVersion)
         
         if self.options.action in ['builddeb','adddebtorepo','uploadrpo','cleanup','all']:
             self.confirmLatestVersion()
@@ -313,51 +313,51 @@ class MozillaInstaller:
             self.printSuccessMessage()
 
     def welcome(self):
-        print "\nWelcome to Ubuntuzilla Packager version " + self.version.version + "\n\nUbuntuzilla Packager creates a .deb file out of the latest release of Firefox, Thunderbird, or Seamonkey.\n\nThis script will now build the .deb of latest release of the official Mozilla build of " + self.options.package.capitalize() + ". If you run into any problems using this script, or have feature requests, suggestions, or general comments, please visit our website at", self.version.url, "\n"
+        print("\nWelcome to Ubuntuzilla Packager version " + self.version.version + "\n\nUbuntuzilla Packager creates a .deb file out of the latest release of Firefox, Thunderbird, or Seamonkey.\n\nThis script will now build the .deb of latest release of the official Mozilla build of " + self.options.package.capitalize() + ". If you run into any problems using this script, or have feature requests, suggestions, or general comments, please visit our website at", self.version.url, "\n")
         
-        print "\nThe action you have requested is: " + bold + self.options.action + unbold + '\n'
+        print("\nThe action you have requested is: " + bold + self.options.action + unbold + '\n')
 
     def getLatestVersion(self): # done in child, in self.releaseVersion
         if self.options.action != 'getversion': # this should only output the version and be quiet otherwise
-            print "Retrieving the version of the latest release of " + self.options.package.capitalize() + " from the Mozilla website..."
+            print("Retrieving the version of the latest release of " + self.options.package.capitalize() + " from the Mozilla website...")
         # child-specific implementation comes in here
 
     def confirmLatestVersion(self):
-        print bold + "The most recent release of " + self.options.package.capitalize() + " is detected to be " + self.releaseVersion + "." + unbold
-        print "\nPlease make sure this is correct before proceeding. (You can confirm by going to http://www.mozilla.org/)"
-        print "If no version number shows, if the version shown is not the latest, or if you would like to use a different release, press 'n', and you'll be given the option to enter the version manually. Otherwise, press 'y', and proceed with installation. [y/n]? "
+        print(bold + "The most recent release of " + self.options.package.capitalize() + " is detected to be " + self.releaseVersion + "." + unbold)
+        print("\nPlease make sure this is correct before proceeding. (You can confirm by going to http://www.mozilla.org/)")
+        print("If no version number shows, if the version shown is not the latest, or if you would like to use a different release, press 'n', and you'll be given the option to enter the version manually. Otherwise, press 'y', and proceed with installation. [y/n]? ")
         self.askyesno()
         if self.ans == 'y':
             pass
         else:
-            print "\nIf no version shows, or it does not agree with the latest version as listed on http://www.mozilla.org, please visit our website at", self.version.url, "and let us know."
-            print "If you would like to enter the version manually and proceed with installation, you can do so now. Note that beta and release candidate versions are now allowed, but you use pre-release software at your own risk!\n"
+            print("\nIf no version shows, or it does not agree with the latest version as listed on http://www.mozilla.org, please visit our website at", self.version.url, "and let us know.")
+            print("If you would like to enter the version manually and proceed with installation, you can do so now. Note that beta and release candidate versions are now allowed, but you use pre-release software at your own risk!\n")
             
             while 1:
-                self.ans = raw_input("Please enter the version of "+ self.options.package.capitalize() + " you wish to install, or 'q' to quit: ")
+                self.ans = input("Please enter the version of "+ self.options.package.capitalize() + " you wish to install, or 'q' to quit: ")
                 if self.ans == 'q':
-                    print 'Quitting by user request...'
+                    print('Quitting by user request...')
                     sys.exit()
                 else:
                     self.releaseVersion = self.ans
-                    print "You have chosen version '" + self.releaseVersion + "'. Is that correct [y/n]?"
+                    print("You have chosen version '" + self.releaseVersion + "'. Is that correct [y/n]?")
                     self.askyesno()
                     if self.ans == 'y':
                         break
     
     def downloadPackage(self): 
         # we are going to dynamically determine the package name
-        print "Retrieving package name for", self.options.package.capitalize(), "..."
+        print("Retrieving package name for", self.options.package.capitalize(), "...")
         for mirror in self.options.mirrors:
             try:
                 self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep '" + self.options.package + "' | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
-                print "Success!: " + self.packageFilename
+                print("Success!: " + self.packageFilename)
                 break
             except SystemCommandExecutionError:
-                print "Download error. Trying again, hoping for a different mirror."
+                print("Download error. Trying again, hoping for a different mirror.")
                 time.sleep(2)
         else:
-            print "Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url
+            print("Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url)
             sys.exit(1)
         
         
@@ -381,44 +381,44 @@ class MozillaInstaller:
             self.util.execSystemCommand("gpg --list-keys --with-colons 812347DD", includewithtest=True, errormessage="Mozilla GPG key not present on the system. Will attempt to retrieve from keyserver.")
             self.util.execSystemCommand("gpg --list-keys --with-colons 6CE2996F", includewithtest=True, errormessage="Mozilla GPG key not present on the system. Will attempt to retrieve from keyserver.")
         except SystemCommandExecutionError:
-            print "\nImporting Mozilla Software Releases public key\n"
-            print "Note that if you have never used gpg before on this system, and this is your first time running this script, there may be a delay of about a minute during the generation of a gpg keypair. This is normal and expected behavior.\n"
+            print("\nImporting Mozilla Software Releases public key\n")
+            print("Note that if you have never used gpg before on this system, and this is your first time running this script, there may be a delay of about a minute during the generation of a gpg keypair. This is normal and expected behavior.\n")
             
             for i in range(0,5):
                 for keyserver in self.options.keyservers:
                     try:
                         self.util.execSystemCommand("gpg --keyserver " + keyserver + " --recv 0E3606D9 812347DD 6CE2996F", includewithtest=True)
                         self.keySuccess = True
-                        print "Successfully retrieved Mozilla Software Releases Public key from", keyserver, ".\n"
+                        print("Successfully retrieved Mozilla Software Releases Public key from", keyserver, ".\n")
                         break
                     except:
-                        print "Unable to retrieve Mozilla Software Releases Public key from", keyserver, ". Trying again..."
+                        print("Unable to retrieve Mozilla Software Releases Public key from", keyserver, ". Trying again...")
                         time.sleep(2)
                 if self.keySuccess:
                     break
             if not self.keySuccess:
-                print "Failed to retrieve Mozilla Software Releases Public key from any of the listed keyservers. Please check your network connection, and try again later.\n"
+                print("Failed to retrieve Mozilla Software Releases Public key from any of the listed keyservers. Please check your network connection, and try again later.\n")
                 sys.exit(1)
 
     def verifyGPGSignature(self):
-        print "\nVerifying signature...\nNote: do not worry about \"untrusted key\" warnings. That is normal behavior for newly imported keys.\n"
+        print("\nVerifying signature...\nNote: do not worry about \"untrusted key\" warnings. That is normal behavior for newly imported keys.\n")
         #returncode = os.system("gpg --verify " + self.sigFilename + " " + self.packageFilename)
         returncode = os.system("gpg --verify SHA512SUMS.asc SHA512SUMS")
         if returncode:
-            print "GPG signature verification failed. This is most likely due to a corrupt download. You should delete files 'SHA512SUMS', 'SHA512SUMS.asc', '", self.packageFilename, "', and run the script again.\n"
-            print "Would you like to delete those files now? [y/n]? "
+            print("GPG signature verification failed. This is most likely due to a corrupt download. You should delete files 'SHA512SUMS', 'SHA512SUMS.asc', '", self.packageFilename, "', and run the script again.\n")
+            print("Would you like to delete those files now? [y/n]? ")
             self.askyesno()
             if self.ans == 'y':
-                print "\nOK, deleting files and exiting.\n"
+                print("\nOK, deleting files and exiting.\n")
                 os.remove(self.packageFilename)
                 os.remove('SHA512SUMS')
                 os.remove('SHA512SUMS.asc')
             else:
-                print "OK, exiting without deleting files.\n"
+                print("OK, exiting without deleting files.\n")
             sys.exit(1)
 
     def getMD5Sum(self): # ok this is not necessarily md5...
-        print "\nDownloading " + self.options.package.capitalize() + " checksums from the Mozilla site\n"
+        print("\nDownloading " + self.options.package.capitalize() + " checksums from the Mozilla site\n")
         self.sigFilename = self.packageFilename + ".sha512"
         if self.options.package == 'firefox-esr':
             package = 'firefox'
@@ -432,23 +432,27 @@ class MozillaInstaller:
         self.verifyGPGSignature()
         
         # extract desired shasum line, remove extra junk from filepath/name.
-        os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + package + " | grep tar.bz2 | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
+        if os.path.isfile(self.sigFilename):
+            print("Using existing shasum file.\n")
+        else:
+            os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + package + " | grep tar.bz2 | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
+            
         os.remove('SHA512SUMS')
         os.remove('SHA512SUMS.asc')
 
     def verifyMD5Sum(self):
-        print "\nVerifying checksum\n"
+        print("\nVerifying checksum\n")
         returncode = os.system("sha512sum -c " + self.sigFilename)
         if returncode:
-            print "Checksum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n"
-            print "Would you like to delete those two files now? [y/n]? "
+            print("Checksum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n")
+            print("Would you like to delete those two files now? [y/n]? ")
             self.askyesno()
             if self.ans == 'y':
-                print "\nOK, deleting files and exiting.\n"
+                print("\nOK, deleting files and exiting.\n")
                 os.remove(self.packageFilename)
                 os.remove(self.sigFilename)
             else:
-                print "OK, exiting without deleting files.\n"
+                print("OK, exiting without deleting files.\n")
             sys.exit(1)
 
 
@@ -506,7 +510,7 @@ esac
         self.util.execSystemCommand('chmod 755 postrm')
    
     def extractArchive(self):
-        print "\nExtracting archive\n"
+        print("\nExtracting archive\n")
         if re.search('\.tar\.gz$', self.packageFilename):
             self.tar_flags = '-xzf'
         elif re.search('\.tar\.bz2$', self.packageFilename):
@@ -527,7 +531,7 @@ esac
     
     def createMenuItem(self):
                 
-        print"Creating Applications menu item for "+self.options.package.capitalize()+".\n"
+        print("Creating Applications menu item for "+self.options.package.capitalize()+".\n")
         os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
         menufilename = self.options.package + '-mozilla-build.desktop'
         menuitemfile = open(menufilename, "w+")
@@ -558,40 +562,40 @@ MimeType=''' + self.mimeType)
         self.util.execSystemCommand('dpkg-deb -Zgzip --build debian ' + self.options.debdir)
     
     def createRepository(self):
-        print "Would you like to update the local repository with the package just created [y/n]? "
+        print("Would you like to update the local repository with the package just created [y/n]? ")
         self.askyesno()
         if self.ans == 'y':
             os.chdir(self.options.debdir)
             self.util.execSystemCommand('reprepro -S web -P extra -A ' + self.debarch[self.options.arch] + ' -Vb ../mozilla-apt-repository includedeb all ./'+self.packagename+'_' + self.releaseVersion + '-0ubuntu' + self.options.debversion + '_' + self.debarch[self.options.arch] + '.deb')
         else:
-            print "\nOK, not updating repository...\n"
+            print("\nOK, not updating repository...\n")
     
     def syncRepository(self):
-        print "Would you like to upload the repository updates to the server [y/n]? "
+        print("Would you like to upload the repository updates to the server [y/n]? ")
         self.askyesno()
         if self.ans == 'y':
             os.chdir(self.options.debdir)
             self.util.execSystemCommand('rsync -avP -e ssh ../mozilla-apt-repository/* nanotube,ubuntuzilla@frs.sourceforge.net:/home/frs/project/u/ub/ubuntuzilla/mozilla/apt/')
         else:
-            print "\nOK, not uploading repository to server...\n"
+            print("\nOK, not uploading repository to server...\n")
     
     def printSuccessMessage(self):
-        print "\nThe new " + self.options.package.capitalize() + " version " + self.releaseVersion + " has been packaged successfully."
+        print("\nThe new " + self.options.package.capitalize() + " version " + self.releaseVersion + " has been packaged successfully.")
 
     def cleanup(self):
-        print "Would you like to KEEP the original files, and the deb structure, on your hard drive [y/n]? "
+        print("Would you like to KEEP the original files, and the deb structure, on your hard drive [y/n]? ")
         self.askyesno()
         if self.ans == 'n':
             self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
             os.remove(os.path.join('/tmp',self.packageFilename))
             os.remove(os.path.join('/tmp',self.sigFilename))
         else:
-            print "\nOK, exiting without deleting the working files. If you wish to delete them manually later, they are in /tmp, and in " + self.debdir + "."
+            print("\nOK, exiting without deleting the working files. If you wish to delete them manually later, they are in /tmp, and in " + self.debdir + ".")
         
     def askyesno(self):
         if not self.options.unattended:
             while 1:
-                self.ans = raw_input("Please enter 'y' or 'n': ")
+                self.ans = input("Please enter 'y' or 'n': ")
                 if self.ans in ['y','Y','n','N']:
                     self.ans = self.ans.lower()
                     break
@@ -615,7 +619,7 @@ class FirefoxInstaller(MozillaInstaller):
         MozillaInstaller.downloadPackage(self)
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
         
-        print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
+        print("\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n")
         
         self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
@@ -642,28 +646,28 @@ class FirefoxESRInstaller(MozillaInstaller):
         
     def downloadPackage(self): # done, self.packageFilename
         # we are going to dynamically determine the package name
-        print "Retrieving package name for Firefox ESR..."
+        print("Retrieving package name for Firefox ESR...")
         for mirror in self.options.mirrors:
             try:
                 self.packageFilename = self.util.getSystemOutput(executionstring="w3m -dump " + mirror + "firefox/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | grep 'firefox.*tar.bz2' | awk '{print $2}'", numlines=1)
-                print "Success!: " + self.packageFilename
+                print("Success!: " + self.packageFilename)
                 break
             except SystemCommandExecutionError:
-                print "Download error. Trying again, hoping for a different mirror."
+                print("Download error. Trying again, hoping for a different mirror.")
                 time.sleep(2)
         else:
-            print "Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url
+            print("Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url)
             sys.exit(1)
 
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
         
-        print "\nDownloading Firefox ESR archive from the Mozilla site\n"
+        print("\nDownloading Firefox ESR archive from the Mozilla site\n")
         
         self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + 'firefox' + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
     def extractArchive(self):
         MozillaInstaller.extractArchive(self)
-        print self.debdir
+        print(self.debdir)
         self.util.execSystemCommand(executionstring="sudo mv " + self.debdir + self.options.targetdir + "/firefox" + " " + self.debdir + self.options.targetdir + "/firefox-esr")
 
         
@@ -676,7 +680,7 @@ class FirefoxESRInstaller(MozillaInstaller):
         self.Categories = "Network;WebBrowser;"
         self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
         
-        print"Creating Applications menu item for Firefox ESR.\n"
+        print("Creating Applications menu item for Firefox ESR.\n")
         os.chdir(os.path.join(self.debdir, 'usr','share','applications'))
         menufilename = self.options.package + '-mozilla-build.desktop'
         menuitemfile = open(menufilename, "w+")
@@ -757,7 +761,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         MozillaInstaller.downloadPackage(self)
         #self.packageFilename = self.options.package + "-" + self.releaseVersion + ".tar.gz"
         
-        print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
+        print("\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n")
         
         self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
     
@@ -785,13 +789,13 @@ class SeamonkeyInstaller(MozillaInstaller):
     def downloadPackage(self): # done, self.packageFilename
         MozillaInstaller.downloadPackage(self)
         
-        print "\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n"
+        print("\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n")
         
         self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
 
     def getMD5Sum(self): # done, self.sigFilename
         self.sigFilename = self.options.package + "-" + self.releaseVersion + ".checksums"
-        print "\nDownloading Seamonkey MD5 sums from the Mozilla site\n"
+        print("\nDownloading Seamonkey MD5 sums from the Mozilla site\n")
 
         self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.sigFilename + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
         self.util.execSystemCommand("sed -i 's#md5.*linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
@@ -800,18 +804,18 @@ class SeamonkeyInstaller(MozillaInstaller):
         # sed to:  91360c07aea125dbc3e03e33de4db01a  ./seamonkey-2.0.tar.bz2
 
     def verifyMD5Sum(self):
-        print "\nVerifying Seamonkey MD5 sum\n"
+        print("\nVerifying Seamonkey MD5 sum\n")
         returncode = os.system("md5sum -c " + self.sigFilename)
         if returncode:
-            print "MD5 sum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n"
-            print "Would you like to delete those two files now? [y/n]? "
+            print("MD5 sum verification failed. This is most likely due to a corrupt download. You should delete files '", self.sigFilename, "' and '", self.packageFilename, "' and run the script again.\n")
+            print("Would you like to delete those two files now? [y/n]? ")
             self.askyesno()
             if self.ans == 'y':
-                print "\nOK, deleting files and exiting.\n"
+                print("\nOK, deleting files and exiting.\n")
                 os.remove(self.packageFilename)
                 os.remove(self.sigFilename)
             else:
-                print "OK, exiting without deleting files.\n"
+                print("OK, exiting without deleting files.\n")
             sys.exit(1)
 
     def downloadGPGSignature(self): #don't need this for seamonkey, blank it out
