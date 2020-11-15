@@ -457,7 +457,7 @@ class MozillaInstaller:
 
 
     def createDebStructure(self):
-        provides = 'gnome-www-browser, iceweasel, www-browser, '
+        provides = 'gnome-www-browser, www-browser, '
         if self.options.package == 'thunderbird':
             provides = 'mail-reader, '
         
@@ -706,7 +706,7 @@ MimeType=''' + self.mimeType)
 
         
     def createDebStructure(self):
-        provides = 'gnome-www-browser, iceweasel, www-browser, '
+        provides = 'gnome-www-browser, www-browser, '
         
         self.util.execSystemCommand(executionstring="sudo rm -rf " + self.debdir)
         self.util.execSystemCommand(executionstring="mkdir -p " + self.debdir)
