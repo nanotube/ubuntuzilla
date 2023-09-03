@@ -628,7 +628,7 @@ class FirefoxInstaller(MozillaInstaller):
         self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Browser"
         self.Comment = "Web Browser"
-        self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
+        self.wmClass = "firefox" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;WebBrowser;"
         self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
         MozillaInstaller.createMenuItem(self)
@@ -676,7 +676,7 @@ class FirefoxESRInstaller(MozillaInstaller):
         self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Browser"
         self.Comment = "Web Browser"
-        self.wmClass = "Firefox" # as determined by 'xprop WM_CLASS'
+        self.wmClass = "firefox" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;WebBrowser;"
         self.mimeType = "text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;"
         
@@ -770,7 +770,7 @@ class ThunderbirdInstaller(MozillaInstaller):
         self.iconPath = self.options.package + "-mozilla-build"
         self.GenericName = "Mail Client"
         self.Comment = "Read/Write Mail/News with Mozilla Thunderbird"
-        self.wmClass = "Thunderbird" # as determined by 'xprop WM_CLASS'
+        self.wmClass = "thunderbird" # as determined by 'xprop WM_CLASS'
         self.Categories = "Network;Email;"
         self.mimeType = "x-scheme-handler/mailto;application/x-xpinstall;"
         MozillaInstaller.createMenuItem(self)
