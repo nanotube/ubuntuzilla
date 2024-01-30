@@ -108,7 +108,7 @@ class UtilityFunctions:
         result = p.stdout.readlines()
         
         # need this separate check for w3m, since its return code is 0 even if it fails to find the site.
-        if re.match("w3m", executionstring):
+        if re.search("w3m", executionstring):
             if len(result) == 0 or re.match("w3m: Can't load", result[0]):
                 errormessage = '\n'.join(result) + errormessage
                 returncode = 1
@@ -215,7 +215,7 @@ class BaseStarter:
                 debdir=os.getcwd(),
                 targetdir="/opt",
                 arch="i686",
-                mirrors=['http://releases.mozilla.org/pub/',],
+                mirrors=['http://releases.mozilla.org/pub/','https://archive.seamonkey-project.org'],
                 keyservers = ['subkeys.pgp.net',
                         'pgpkeys.mit.edu',
                         'pgp.mit.edu',
@@ -345,12 +345,16 @@ class MozillaInstaller:
                     if self.ans == 'y':
                         break
     
-    def downloadPackage(self): 
+    def downloadPackage(self, sm=False): 
         # we are going to dynamically determine the package name
         print("Retrieving package name for", self.options.package.capitalize(), "...")
+        if not sm:
+            pkg = self.options.package
+        else:
+            pkg = ''
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + pkg + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
                 print("Success!: " + self.packageFilename)
                 break
             except SystemCommandExecutionError:
@@ -783,21 +787,21 @@ class SeamonkeyInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.seamonkey-project.org/ |grep 'pub/seamonkey/releases/.*/linux.*en-US' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
-        self.releaseVersion = re.search(r'pub/seamonkey/releases/(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.seamonkey-project.org/ |grep 'org/releases/.*/linux.*en-US' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'org/releases/(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
     
     def downloadPackage(self): # done, self.packageFilename
-        MozillaInstaller.downloadPackage(self)
+        MozillaInstaller.downloadPackage(self, sm=True)
         
         print("\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n")
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" +  "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
 
     def getMD5Sum(self): # done, self.sigFilename
         self.sigFilename = self.options.package + "-" + self.releaseVersion + ".checksums"
         print("\nDownloading Seamonkey MD5 sums from the Mozilla site\n")
 
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + self.options.package + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.sigFilename + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.sigFilename + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
         self.util.execSystemCommand("sed -i 's#md5.*linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
 
         # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
