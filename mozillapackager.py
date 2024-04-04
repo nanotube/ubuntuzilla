@@ -350,20 +350,20 @@ class MozillaInstaller:
         print("Retrieving package name for", self.options.package.capitalize(), "...")
         if not sm:
             pkg = self.options.package
+            for mirror in self.options.mirrors:
+                try:
+                    self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + pkg + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
+                    print("Success!: " + self.packageFilename)
+                    break
+                except SystemCommandExecutionError:
+                    print("Download error. Trying again, hoping for a different mirror.")
+                    time.sleep(2)
+            else:
+                print("Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url)
+                sys.exit(1)
         else:
-            pkg = ''
-        for mirror in self.options.mirrors:
-            try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + pkg + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
-                print("Success!: " + self.packageFilename)
-                break
-            except SystemCommandExecutionError:
-                print("Download error. Trying again, hoping for a different mirror.")
-                time.sleep(2)
-        else:
-            print("Failed to retrieve package name. This may be due to transient network problems, so try again later. If the problem persists, please seek help on our website,", self.version.url)
-            sys.exit(1)
-        
+            print("Doing a different thing for seamonkey package filename.")
+
         
     def downloadGPGSignature(self): # done, self.sigFilename
         pass
@@ -791,11 +791,16 @@ class SeamonkeyInstaller(MozillaInstaller):
         self.releaseVersion = re.search(r'org/releases/(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
     
     def downloadPackage(self): # done, self.packageFilename
-        MozillaInstaller.downloadPackage(self, sm=True)
+        MozillaInstaller.downloadPackage(self, sm=True) # don't really need this since SM broke directory traverse on their release server
+        # try to get SM package filename
+        packagelink = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.seamonkey-project.org/ |grep 'org/releases/.*/linux.*en-US.*" + self.options.arch + "' -m 1", numlines=1, errormessage="Failed to retrieve link to the latest version of "+ self.options.package.capitalize())
+        packagelink = re.search(r'(https.*bz2)',packagelink).group(1)
+        print("Retrieving package from " + packagelink)
+        self.packageFilename = os.path.basename(packagelink)
         
         print("\nDownloading", self.options.package.capitalize(), "archive from the Mozilla site\n")
         
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + "%mirror%" +  "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/" + self.packageFilename, 'includewithtest':True})
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 " + packagelink, 'includewithtest':True})
 
     def getMD5Sum(self): # done, self.sigFilename
         self.sigFilename = self.options.package + "-" + self.releaseVersion + ".checksums"
