@@ -515,9 +515,9 @@ esac
    
     def extractArchive(self):
         print("\nExtracting archive\n")
-        if re.search('\.tar\.gz$', self.packageFilename):
+        if re.search(r'\.tar\.gz$', self.packageFilename):
             self.tar_flags = '-xzf'
-        elif re.search('\.tar\.bz2$', self.packageFilename):
+        elif re.search(r'\.tar\.bz2$', self.packageFilename):
             self.tar_flags = '-xjf'
         #self.util.execSystemCommand(executionstring="sudo mkdir -p " + self.options.targetdir)
         #if not self.options.test:
