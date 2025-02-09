@@ -352,7 +352,7 @@ class MozillaInstaller:
             pkg = self.options.package
             for mirror in self.options.mirrors:
                 try:
-                    self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + pkg + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep '" + self.options.package + ".*tar.bz2' | awk '{print $2}'", numlines=1)
+                    self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + pkg + "/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep '" + self.options.package + ".*tar\.bz2\|xz' | awk '{print $2}'", numlines=1)
                     print("Success!: " + self.packageFilename)
                     break
                 except SystemCommandExecutionError:
@@ -439,7 +439,7 @@ class MozillaInstaller:
         if os.path.isfile(self.sigFilename):
             print("Using existing shasum file.\n")
         else:
-            os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + package + " | grep tar.bz2 | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
+            os.system("cat SHA512SUMS | grep linux-" + self.options.arch + " | grep en-US | grep " + package + " | grep 'tar\.bz2\|xz' | grep -v sdk | awk '{gsub(\".*\",\"" + self.packageFilename + "\",$2); print $0}' > " + self.sigFilename)
             
         os.remove('SHA512SUMS')
         os.remove('SHA512SUMS.asc')
@@ -519,6 +519,9 @@ esac
             self.tar_flags = '-xzf'
         elif re.search(r'\.tar\.bz2$', self.packageFilename):
             self.tar_flags = '-xjf'
+        elif re.search(r'\.tar\.xz$', self.packageFilename):
+            self.tar_flags = '-xJf'
+
         #self.util.execSystemCommand(executionstring="sudo mkdir -p " + self.options.targetdir)
         #if not self.options.test:
         self.util.execSystemCommand(executionstring="sudo tar -C " + self.debdir + self.options.targetdir + " " + self.tar_flags + " /tmp/" + self.packageFilename)
@@ -757,8 +760,8 @@ class ThunderbirdInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - http://www.mozilla.com/thunderbird/ |grep 'product=' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
-        self.releaseVersion = re.search(r'thunderbird\-(([0-9]+\.)+[0-9]+)',self.releaseVersion).group(1)
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - https://www.thunderbird.net/en-US/thunderbird/all/ |grep 'releasenotes' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = re.search(r'thunderbird/(.*)/releasenotes',self.releaseVersion).group(1)
 
 
     def downloadPackage(self): # done, self.packageFilename
