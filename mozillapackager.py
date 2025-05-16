@@ -215,7 +215,7 @@ class BaseStarter:
                 debdir=os.getcwd(),
                 targetdir="/opt",
                 arch="i686",
-                mirrors=['http://releases.mozilla.org/pub/','https://archive.seamonkey-project.org'],
+                mirrors=['http://releases.mozilla.org/pub/','https://archive.seamonkey-project.org/'],
                 keyservers = ['subkeys.pgp.net',
                         'pgpkeys.mit.edu',
                         'pgp.mit.edu',
@@ -760,7 +760,7 @@ class ThunderbirdInstaller(MozillaInstaller):
 
     def getLatestVersion(self):
         MozillaInstaller.getLatestVersion(self)
-        self.releaseVersion = self.util.getSystemOutput(executionstring="wget -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - https://www.thunderbird.net/en-US/thunderbird/all/ |grep 'releasenotes' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
+        self.releaseVersion = self.util.getSystemOutput(executionstring="wget --user-agent=\"Mozilla\" -c --tries=20 --read-timeout=60 --waitretry=10 -q -nv -O - https://www.thunderbird.net/en-US/thunderbird/all/ |grep 'releasenotes' -m 1", numlines=1, errormessage="Failed to retrieve the latest version of "+ self.options.package.capitalize())
         self.releaseVersion = re.search(r'thunderbird/(.*)/releasenotes',self.releaseVersion).group(1)
 
 
