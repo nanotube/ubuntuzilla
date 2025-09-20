@@ -656,7 +656,7 @@ class FirefoxESRInstaller(MozillaInstaller):
         print("Retrieving package name for Firefox ESR...")
         for mirror in self.options.mirrors:
             try:
-                self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + "firefox/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep 'firefox.*tar.bz2' | awk '{print $2}'", numlines=1)
+                self.packageFilename = self.util.getSystemOutput(executionstring="curl --no-progress-meter " + mirror + "firefox/releases/" + self.releaseVersion + "/linux-" + self.options.arch + "/en-US/ | w3m -dump -T text/html | grep 'firefox.*tar\.bz2\|xz' | awk '{print $2}'", numlines=1)
                 print("Success!: " + self.packageFilename)
                 break
             except SystemCommandExecutionError:
