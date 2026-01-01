@@ -809,7 +809,7 @@ class SeamonkeyInstaller(MozillaInstaller):
         self.sigFilename = "MD5SUMS.txt" # self.options.package + "-" + self.releaseVersion + ".checksums"
         print("\nDownloading Seamonkey MD5 sums from the Mozilla site\n")
 
-        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + "/releases/" + self.releaseVersion + "/" + self.sigFilename + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
+        self.util.robustDownload(argsdict={'executionstring':"wget -c --tries=5 --read-timeout=20 --waitretry=10 -q -nv -O - " + "%mirror%" + "releases/" + self.releaseVersion + "/" + self.sigFilename + " | grep -F 'linux-" + self.options.arch + "/en-US/" + self.packageFilename + "' | grep -F 'md5' > " + self.sigFilename, 'includewithtest':True}, errormsg="Failed to retrieve md5 sum. This may be due to transient network problems, so try again later. Exiting.")
         self.util.execSystemCommand("sed -i 's#md5.*linux-" + self.options.arch + "/en-US/##' " + self.sigFilename, includewithtest=True)
 
         # example: 91360c07aea125dbc3e03e33de4db01a  ./linux-i686/en-US/seamonkey-2.0.tar.bz2
